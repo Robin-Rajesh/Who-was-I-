@@ -35,7 +35,7 @@ function VideoRow({ e, report, showDate = false }: { e: WatchEntry; report: Repo
           {e.title || untitled(e.source)}
         </MaybeLink>
         <span className="muted video-channel">
-          {report.meta.sources.length > 1 && <span className="src-tag">{sourceDef(e.source).emoji} {sourceDef(e.source).label}</span>}
+          {report.meta.sources.length > 1 && <span className="src-tag">{sourceDef(e.source).label}</span>}
           {e.channel}
         </span>
       </div>
@@ -127,7 +127,7 @@ function PickADay({ report, entries }: { report: Report; entries: WatchEntry[] }
       </div>
       <p className="muted day-summary">
         {list.length ? `${num(list.length)} ${list.length === 1 ? report.vocab.item : report.vocab.items} on ${date(new Date(day + 'T12:00').getTime(), { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}` : 'Nothing on this day.'}
-        {report.milestones.busiestDay && day === isoDay(report.milestones.busiestDay.date) && ' · your busiest day ever 🔥'}
+        {report.milestones.busiestDay && day === isoDay(report.milestones.busiestDay.date) && ' · your busiest day ever'}
       </p>
       <ul className="video-list scroll">
         {list.map((e, i) => (

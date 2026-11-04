@@ -91,7 +91,6 @@ export function ReportView({ data, theme, setTheme, onReset, onForget, onAddFile
       const blob = await renderShareCard({
         kicker: meta.sources.length === 1 ? `my life on ${sourceDef(meta.sources[0].id).label}` : 'my life, played back',
         title: first === last ? String(first) : `${String(first).slice(2)}–${String(last).slice(2)}`,
-        emoji: overallPersona.emoji,
         persona: overallPersona.title,
         blurb: eras.length > 1 ? `${eras.length} eras: ${eras.map((e) => e.name.replace(/^The /, '').replace(/ Era$/, '')).join(' → ')}` : overallPersona.blurb,
         stats: [
@@ -139,7 +138,7 @@ export function ReportView({ data, theme, setTheme, onReset, onForget, onAddFile
         <div className="sample-banner">
           <div className="wrap">
             <span>
-              <Icon name="sparkle" size={16} /> You’re looking at a <b>made-up sample life</b>. Every channel, artist and show here is fictional.
+              <b className="mono">SAMPLE TAPE</b> You’re looking at a made-up life. Every channel, artist and show here is fictional.
             </span>
             <button className="btn btn-primary btn-sm" onClick={onReset}>
               Use my own history <Icon name="arrow-right" size={16} />
@@ -153,7 +152,7 @@ export function ReportView({ data, theme, setTheme, onReset, onForget, onAddFile
           <div className="source-chips" role="group" aria-label="Show data from">
             {allSources.length > 1 && (
               <button className={`source-chip ${data.filter === 'all' ? 'on' : ''}`} aria-pressed={data.filter === 'all'} onClick={() => onFilter('all')}>
-                ✨ Everything <span className="muted tabular">{compact(data.all.length)}</span>
+                All <span className="muted tabular">{compact(data.all.length)}</span>
               </button>
             )}
             {allSources.map((s) => (
@@ -174,9 +173,11 @@ export function ReportView({ data, theme, setTheme, onReset, onForget, onAddFile
               </span>
             ))}
           </div>
-          <button className="btn btn-sm add-source" onClick={() => addRef.current?.click()}>
-            <Icon name="upload" size={16} /> {isSample ? 'Use my own data' : 'Add a platform'}
-          </button>
+          {!isSample && (
+            <button className="btn btn-sm add-source" onClick={() => addRef.current?.click()}>
+              <Icon name="upload" size={16} /> Add a platform
+            </button>
+          )}
           <input
             ref={addRef}
             type="file"
@@ -209,7 +210,7 @@ export function ReportView({ data, theme, setTheme, onReset, onForget, onAddFile
           <Reveal className="closing-card card">
             <span className="eyebrow">That’s you. All of you.</span>
             <h2>
-              {report.eras.length} eras, {num(report.meta.total)} videos, <span className="gradient-text">one person</span>.
+              {report.eras.length} {report.eras.length === 1 ? 'era' : 'eras'}, {num(report.meta.total)} {v.items}, <span className="mark">one person</span>.
             </h2>
             <p className="ink-2">Make a card of your whole story to share, or come back next year and see who you’ve become.</p>
             <div className="closing-actions">

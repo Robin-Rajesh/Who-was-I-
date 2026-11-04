@@ -10,7 +10,6 @@ export function Milestones({ report }: { report: Report }) {
       <div className="milestone-grid">
         {m.busiestDay && (
           <Reveal className="card milestone">
-            <span className="milestone-emoji" aria-hidden>🔥</span>
             <span className="eyebrow">Busiest day ever</span>
             <strong className="callout-big">{num(m.busiestDay.count)} {report.vocab.items}</strong>
             <p className="ink-2">{date(m.busiestDay.date, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
@@ -25,7 +24,6 @@ export function Milestones({ report }: { report: Report }) {
         )}
         {m.longestStreak && (
           <Reveal className="card milestone" delay={50}>
-            <span className="milestone-emoji" aria-hidden>📆</span>
             <span className="eyebrow">Longest daily streak</span>
             <strong className="callout-big">{num(m.longestStreak.days)} days</strong>
             <p className="ink-2">
@@ -35,7 +33,6 @@ export function Milestones({ report }: { report: Report }) {
         )}
         {m.longestBreak && (
           <Reveal className="card milestone" delay={100}>
-            <span className="milestone-emoji" aria-hidden>🏕️</span>
             <span className="eyebrow">Longest break</span>
             <strong className="callout-big">{duration(m.longestBreak.days)}</strong>
             <p className="ink-2">
@@ -45,14 +42,12 @@ export function Milestones({ report }: { report: Report }) {
         )}
         {meta.removedCount > 0 ? (
           <Reveal className="card milestone" delay={150}>
-            <span className="milestone-emoji" aria-hidden>🫥</span>
             <span className="eyebrow">Gone but not forgotten</span>
             <strong className="callout-big">{num(meta.removedCount)}</strong>
             <p className="ink-2">YouTube videos you watched that have since been deleted or made private.</p>
           </Reveal>
         ) : (
           <Reveal className="card milestone" delay={150}>
-            <span className="milestone-emoji" aria-hidden>🧭</span>
             <span className="eyebrow">Days you showed up</span>
             <strong className="callout-big">{num(meta.activeDays)}</strong>
             <p className="ink-2">out of {num(meta.spanDays)} days in your history ({Math.round((meta.activeDays / Math.max(1, meta.spanDays)) * 100)}%).</p>
@@ -62,7 +57,7 @@ export function Milestones({ report }: { report: Report }) {
 
       {m.mostRewatched.length > 0 && (
         <Reveal className="card rewatch" delay={80}>
-          <h3 className="chart-title">🔁 On repeat, all time</h3>
+          <h3 className="chart-title">On repeat, all time</h3>
           <ol className="rewatch-list">
             {m.mostRewatched.map((v, i) => (
               <li key={i}>

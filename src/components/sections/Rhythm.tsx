@@ -21,17 +21,17 @@ export function Rhythm({ report }: { report: Report }) {
       </SectionHead>
       <div className="rhythm-callouts">
         <Reveal className="card callout">
-          <span className="eyebrow">🦉 Peak night owl</span>
+          <span className="eyebrow">Peak night owl</span>
           <strong className="callout-big">{owl.year}</strong>
           <p className="ink-2">{pct(owl.night)} of your {report.vocab.doing} happened between 11pm and 5am.</p>
         </Reveal>
         <Reveal className="card callout" delay={60}>
-          <span className="eyebrow">🌅 Peak early bird</span>
+          <span className="eyebrow">Peak early bird</span>
           <strong className="callout-big">{lark.year}</strong>
           <p className="ink-2">{pct(lark.morning)} of your {report.vocab.doing} happened between 5am and 9am.</p>
         </Reveal>
         <Reveal className="card callout" delay={120}>
-          <span className="eyebrow">📅 Favourite day</span>
+          <span className="eyebrow">Favourite day</span>
           <strong className="callout-big">{['Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays', 'Sundays'][busiestDay]}</strong>
           <p className="ink-2">{pct(weekTotals[busiestDay] / Math.max(1, weekTotals.reduce((s, x) => s + x, 0)))} of all your {report.vocab.doing}.</p>
         </Reveal>

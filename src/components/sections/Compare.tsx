@@ -61,7 +61,6 @@ export function Compare({ report, entries }: { report: Report; entries: WatchEnt
       <div className="compare-grid">
         <Reveal className="card compare-person">
           <span className="compare-year" style={{ color: 'var(--s1)' }}>{a}</span>
-          <span className="persona-emoji sm" aria-hidden>{ya.persona.emoji}</span>
           <h3>{ya.persona.title}</h3>
           <p className="muted">{num(ya.count)} {report.vocab.items} · {num(ya.uniqueChannels)} {report.vocab.creators}</p>
         </Reveal>
@@ -75,7 +74,6 @@ export function Compare({ report, entries }: { report: Report; entries: WatchEnt
         </Reveal>
         <Reveal className="card compare-person" delay={120}>
           <span className="compare-year" style={{ color: 'var(--s2)' }}>{b}</span>
-          <span className="persona-emoji sm" aria-hidden>{yb.persona.emoji}</span>
           <h3>{yb.persona.title}</h3>
           <p className="muted">{num(yb.count)} {report.vocab.items} · {num(yb.uniqueChannels)} {report.vocab.creators}</p>
         </Reveal>
@@ -93,7 +91,7 @@ export function Compare({ report, entries }: { report: Report; entries: WatchEnt
           {topicIds.map((id) => (
             <div key={id} className="paired-row">
               <span className="paired-label">
-                {topicDef(id).emoji} {topicDef(id).label}
+                {topicDef(id).label}
               </span>
               <div className="paired-tracks">
                 {[

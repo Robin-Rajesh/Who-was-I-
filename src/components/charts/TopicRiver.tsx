@@ -155,7 +155,7 @@ export function TopicRiver({ report }: { report: Report }) {
                     <rect width={w} height={4} rx={2} fill="var(--ink-2)" opacity={k % 2 ? 0.35 : 0.6} />
                     {w > 56 && (
                       <text x={w / 2} y={18} textAnchor="middle" className="axis-label era-label">
-                        {e.emoji} {e.name.replace(/^The /, '').replace(/ Era$/, '')}
+                        {e.name.replace(/^The /, '').replace(/ Era$/, '')}
                       </text>
                     )}
                   </g>

@@ -1,9 +1,8 @@
-/** Renders a 1080×1350 share image (Instagram portrait) entirely on a canvas. */
+/** Renders a 1080×1350 share image (Instagram portrait) entirely on a canvas, in the app's tape-archive style. */
 
 export interface ShareCardData {
   kicker: string;
   title: string;
-  emoji: string;
   persona: string;
   blurb: string;
   stats: { value: string; label: string }[];
@@ -12,12 +11,26 @@ export interface ShareCardData {
   topics: { label: string; share: number; slot: number | null }[];
 }
 
-// Dark-mode categorical steps (validated order) – the card is always dark.
-const SLOT_HEX = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9'];
-const OTHER_HEX = '#55544f';
+// Light-mode categorical steps (validated order) – the card is printed on paper.
+const SLOT_HEX = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6'];
+const OTHER_HEX = '#b4ad9e';
+const PAPER = '#efe9dc';
+const INK = '#15120e';
+const INK2 = '#4a443a';
+const MUTED = '#736c5f';
+const ACCENT = '#ec4a12';
 
-const DISPLAY = '"Fraunces Variable", Georgia, serif';
-const SANS = '"Inter Variable", system-ui, -apple-system, "Segoe UI", sans-serif';
+const DISPLAY = '"Archivo Variable", "Arial Narrow", Arial, sans-serif';
+const MONO = '"IBM Plex Mono", ui-monospace, Menlo, monospace';
+
+type Ctx = CanvasRenderingContext2D;
+type Stretch = 'normal' | 'semi-condensed' | 'condensed' | 'extra-condensed';
+
+/** Sets the font; canvas width-axis support (fontStretch) is used where the browser has it. */
+function setFont(ctx: Ctx, font: string, stretch: Stretch = 'normal') {
+  ctx.font = font;
+  if ('fontStretch' in ctx) ctx.fontStretch = stretch;
+}
 
 function ellipsize(ctx: CanvasRenderingContext2D, text: string, max: number): string {
   if (ctx.measureText(text).width <= max) return text;
@@ -43,163 +56,156 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, max: number, maxLines
   return lines;
 }
 
+/** Biggest font size (≤ max) at which `text` fits in `width`. */
+function fitSize(ctx: Ctx, text: string, width: number, max: number, weight: number, stretch: Stretch): number {
+  let size = max;
+  for (; size > 24; size -= 4) {
+    setFont(ctx, `${weight} ${size}px ${DISPLAY}`, stretch);
+    if (ctx.measureText(text).width <= width) break;
+  }
+  return size;
+}
+
 export async function renderShareCard(d: ShareCardData): Promise<Blob> {
   const W = 1080;
   const H = 1350;
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
-  const ctx = canvas.getContext('2d')!;
+  const ctx = canvas.getContext('2d')! as Ctx;
   try {
-    await Promise.all([document.fonts.load(`600 80px ${DISPLAY}`), document.fonts.load(`500 30px ${SANS}`)]);
+    await Promise.all([document.fonts.load(`900 120px ${DISPLAY}`), document.fonts.load(`500 28px ${MONO}`), document.fonts.load(`600 28px ${MONO}`)]);
   } catch {
     /* fall back to system fonts */
   }
-
-  // Background
-  const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, '#16151f');
-  bg.addColorStop(0.55, '#121211');
-  bg.addColorStop(1, '#1f1410');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
-  const glow = ctx.createRadialGradient(W * 0.85, 120, 20, W * 0.85, 120, 560);
-  glow.addColorStop(0, 'rgba(144,133,233,0.28)');
-  glow.addColorStop(1, 'rgba(144,133,233,0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, W, H);
-  const glow2 = ctx.createRadialGradient(80, H - 80, 20, 80, H - 80, 520);
-  glow2.addColorStop(0, 'rgba(235,104,52,0.22)');
-  glow2.addColorStop(1, 'rgba(235,104,52,0)');
-  ctx.fillStyle = glow2;
-  ctx.fillRect(0, 0, W, H);
-
-  const X = 84;
+  const X = 72;
   const innerW = W - X * 2;
-
-  // Header
-  ctx.fillStyle = '#c3c2b7';
-  ctx.font = `600 26px ${SANS}`;
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText('WHO WAS I?', X, 120);
+
+  // Paper
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(0, 0, W, H);
+
+  // Header strip
+  ctx.fillStyle = INK;
+  ctx.fillRect(0, 0, W, 96);
+  ctx.fillStyle = ACCENT;
+  ctx.beginPath();
+  ctx.arc(X + 10, 48, 11, 0, Math.PI * 2);
+  ctx.fill();
+  setFont(ctx, `600 26px ${MONO}`);
+  ctx.fillStyle = PAPER;
+  ctx.fillText('REC  WHO WAS I?', X + 36, 57);
   ctx.textAlign = 'right';
-  ctx.fillStyle = '#8f8d86';
-  ctx.fillText(d.kicker.toUpperCase(), W - X, 120);
+  ctx.fillStyle = '#bdb5a4';
+  ctx.fillText(d.kicker.toUpperCase(), W - X, 57);
   ctx.textAlign = 'left';
 
-  // Big title (year)
-  const tg = ctx.createLinearGradient(X, 0, X + 620, 0);
-  tg.addColorStop(0, '#9085e9');
-  tg.addColorStop(0.6, '#eb6834');
-  tg.addColorStop(1, '#f2b84b');
-  ctx.fillStyle = tg;
-  ctx.font = `600 190px ${DISPLAY}`;
-  ctx.fillText(d.title, X - 6, 320);
+  // Title (year or range), condensed poster numerals
+  const titleSize = fitSize(ctx, d.title, innerW, 270, 900, 'extra-condensed');
+  setFont(ctx, `900 ${titleSize}px ${DISPLAY}`, 'extra-condensed');
+  ctx.fillStyle = INK;
+  ctx.fillText(d.title, X - 6, 96 + 40 + titleSize * 0.78);
+  let y = 96 + 40 + titleSize * 0.78 + 36;
 
-  // Persona
-  ctx.font = `86px ${SANS}`;
-  ctx.fillText(d.emoji, X, 450);
-  ctx.fillStyle = '#f0efec';
-  ctx.font = `600 64px ${DISPLAY}`;
-  const personaLines = wrap(ctx, d.persona, innerW - 120, 2);
-  personaLines.forEach((l, i) => ctx.fillText(l, X + 118, 430 + i * 70));
-  let y = 430 + personaLines.length * 70 + 18;
-  ctx.fillStyle = '#c3c2b7';
-  ctx.font = `400 30px ${SANS}`;
-  for (const l of wrap(ctx, d.blurb, innerW, 2)) {
+  // Persona on an accent block
+  const persona = d.persona.toUpperCase();
+  setFont(ctx, `900 92px ${DISPLAY}`, 'extra-condensed');
+  const pLines = wrap(ctx, persona, innerW - 56, 2);
+  const blockH = 40 + pLines.length * 84;
+  ctx.fillStyle = ACCENT;
+  ctx.fillRect(X, y, innerW, blockH);
+  ctx.fillStyle = '#fff8f0';
+  pLines.forEach((l, i) => ctx.fillText(l, X + 28, y + 100 + i * 84 - 6));
+  y += blockH + 40;
+
+  // Blurb, typewriter style
+  setFont(ctx, `500 25px ${MONO}`);
+  ctx.fillStyle = INK2;
+  for (const l of wrap(ctx, d.blurb, innerW, 3)) {
     ctx.fillText(l, X, y);
-    y += 42;
+    y += 38;
   }
 
   // Topic bar
-  y += 26;
-  const barH = 22;
+  y += 18;
   let bx = X;
   const totalShare = d.topics.reduce((s, t) => s + t.share, 0) || 1;
   d.topics.forEach((t) => {
     const w = (t.share / totalShare) * innerW;
     ctx.fillStyle = t.slot ? SLOT_HEX[t.slot - 1] : OTHER_HEX;
-    ctx.beginPath();
-    ctx.roundRect(bx, y, Math.max(2, w - 4), barH, 6);
-    ctx.fill();
+    ctx.fillRect(bx, y, Math.max(2, w - 3), 26);
     bx += w;
   });
-  y += barH + 40;
-  ctx.font = `500 26px ${SANS}`;
+  y += 26 + 40;
+  setFont(ctx, `500 22px ${MONO}`);
   let lx = X;
   for (const t of d.topics.slice(0, 4)) {
-    const label = `${t.label} ${Math.round((t.share / totalShare) * 100)}%`;
+    const label = `${t.label.toUpperCase()} ${Math.round((t.share / totalShare) * 100)}%`;
     const w = ctx.measureText(label).width + 44;
     if (lx + w > W - X) break;
     ctx.fillStyle = t.slot ? SLOT_HEX[t.slot - 1] : OTHER_HEX;
-    ctx.beginPath();
-    ctx.arc(lx + 8, y - 9, 8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#c3c2b7';
-    ctx.fillText(label, lx + 24, y);
+    ctx.fillRect(lx, y - 16, 14, 14);
+    ctx.fillStyle = INK2;
+    ctx.fillText(label, lx + 22, y - 2);
     lx += w;
   }
 
-  // Two columns: channels + words
-  y += 70;
+  // Two columns: on repeat / on my mind – sized to the space left above the stats.
+  const sy = H - 200;
+  y += 56;
+  const rows = Math.max(1, Math.min(5, Math.floor((sy - 74 - 24 - (y + 56)) / 50) + 1));
   const colW = (innerW - 40) / 2;
-  ctx.fillStyle = '#8f8d86';
-  ctx.font = `600 22px ${SANS}`;
-  ctx.fillText('ON REPEAT', X, y);
-  ctx.fillText('ON MY MIND', X + colW + 40, y);
-  let cy = y + 52;
-  d.channels.slice(0, 5).forEach((c, i) => {
-    ctx.fillStyle = '#8f8d86';
-    ctx.font = `600 28px ${SANS}`;
-    ctx.fillText(String(i + 1), X, cy);
-    ctx.fillStyle = '#f0efec';
-    ctx.font = `500 30px ${SANS}`;
-    ctx.fillText(ellipsize(ctx, c.name, colW - 50), X + 36, cy);
-    cy += 52;
+  ctx.fillStyle = INK;
+  ctx.fillRect(X, y - 30, innerW, 3);
+  setFont(ctx, `600 21px ${MONO}`);
+  ctx.fillStyle = MUTED;
+  ctx.fillText('ON REPEAT', X, y + 4);
+  ctx.fillText('ON MY MIND', X + colW + 40, y + 4);
+  let cy = y + 56;
+  d.channels.slice(0, rows).forEach((c, i) => {
+    setFont(ctx, `500 22px ${MONO}`);
+    ctx.fillStyle = MUTED;
+    ctx.fillText(String(i + 1).padStart(2, '0'), X, cy);
+    setFont(ctx, `700 34px ${DISPLAY}`, 'semi-condensed');
+    ctx.fillStyle = INK;
+    ctx.fillText(ellipsize(ctx, c.name, colW - 50), X + 44, cy);
+    cy += 50;
   });
-  let wy = y + 52;
+  let wy = y + 56;
   let wx = X + colW + 40;
-  ctx.font = `500 28px ${SANS}`;
+  setFont(ctx, `500 24px ${MONO}`);
   for (const w of d.words.slice(0, 8)) {
-    const tw = ctx.measureText(w).width + 36;
+    const tw = ctx.measureText(w).width + 28;
     if (wx + tw > W - X) {
       wx = X + colW + 40;
-      wy += 58;
-      if (wy > y + 52 + 58 * 4) break;
+      wy += 54;
+      if (wy > y + 56 + 50 * (rows - 1)) break;
     }
-    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+    ctx.strokeStyle = INK;
     ctx.lineWidth = 2;
-    ctx.setLineDash([6, 6]);
-    ctx.beginPath();
-    ctx.roundRect(wx, wy - 34, tw, 46, 23);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = '#e6e5e0';
-    ctx.fillText(w, wx + 18, wy - 2);
-    wx += tw + 12;
+    ctx.strokeRect(wx, wy - 32, tw, 44);
+    ctx.fillStyle = INK;
+    ctx.fillText(w, wx + 14, wy - 2);
+    wx += tw + 10;
   }
 
-  // Stats row
-  const sy = H - 230;
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(X, sy - 60);
-  ctx.lineTo(W - X, sy - 60);
-  ctx.stroke();
+  // Stats
+  ctx.fillStyle = INK;
+  ctx.fillRect(X, sy - 74, innerW, 3);
   const sw = innerW / d.stats.length;
   d.stats.forEach((s, i) => {
-    ctx.fillStyle = '#f0efec';
-    ctx.font = `600 58px ${DISPLAY}`;
+    setFont(ctx, `900 78px ${DISPLAY}`, 'extra-condensed');
+    ctx.fillStyle = INK;
     ctx.fillText(s.value, X + i * sw, sy + 20);
-    ctx.fillStyle = '#8f8d86';
-    ctx.font = `500 24px ${SANS}`;
-    ctx.fillText(s.label, X + i * sw, sy + 62);
+    setFont(ctx, `500 20px ${MONO}`);
+    ctx.fillStyle = MUTED;
+    ctx.fillText(s.label.toUpperCase(), X + i * sw, sy + 56);
   });
 
-  ctx.fillStyle = '#8f8d86';
-  ctx.font = `500 24px ${SANS}`;
-  ctx.fillText('Made from my YouTube history · nothing was uploaded', X, H - 70);
+  setFont(ctx, `500 20px ${MONO}`);
+  ctx.fillStyle = MUTED;
+  ctx.fillText('MADE FROM MY OWN DATA · NOTHING WAS UPLOADED', X, H - 64);
 
   return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not render image'))), 'image/png'));
 }

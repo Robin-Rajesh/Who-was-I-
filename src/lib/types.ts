@@ -99,6 +99,8 @@ export interface Era {
   tagline: string;
   count: number;
   topTopics: TopicShare[];
+  /** The topic that defines the era (background topics like a Spotify soundtrack step aside). */
+  lead: TopicId;
   topChannels: ChannelRef[];
   words: string[];
   emoji: string;

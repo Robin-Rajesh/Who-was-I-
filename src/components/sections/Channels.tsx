@@ -35,8 +35,8 @@ export function Channels({ report }: { report: Report }) {
         {current.list.map((s, i) => (
           <Reveal key={`${current.value}-${s.name}`} className="story card" delay={Math.min(i, 8) * 40}>
             <div className="story-head">
-              <span className="story-topic" style={{ background: topicColor(report, s.topic) }} aria-hidden>
-                {topicDef(s.topic).emoji}
+              <span className="story-topic" style={{ background: topicColor(report, s.topic) }} title={topicDef(s.topic).label} aria-hidden>
+                {s.name.replace(/^[^\p{L}\p{N}]+/u, '').charAt(0).toUpperCase() || '?'}
               </span>
               <div style={{ minWidth: 0 }}>
                 <h3 className="story-name">

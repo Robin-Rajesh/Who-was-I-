@@ -419,6 +419,7 @@ export function analyze(entries: WatchEntry[], opts: { sample: boolean }, progre
       topChannels,
       words: words.filter((x) => (a.words.get(x.w)?.ch.length ?? 0) >= 1).slice(0, 6).map((x) => show(x.w)),
       emoji: top ? topicDef(top.id).emoji : '✨',
+      lead: top?.id ?? 'other',
       anthem: anthemEntry && anthemEntry[1] >= 2 ? videoRef(entries, anthemEntry[0], anthemEntry[1]) : null,
     };
   });

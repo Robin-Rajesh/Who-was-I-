@@ -29,7 +29,7 @@ export function Overview({ report }: { report: Report }) {
         </span>
         <h1>
           {before}
-          <span className="gradient-text">{num(meta.total)}</span>
+          <span className="mark">{num(meta.total)}</span>
           {after}
         </h1>
         <p className="lede">
@@ -43,9 +43,6 @@ export function Overview({ report }: { report: Report }) {
       <div className="overview-grid">
         <Reveal className="persona-card card" delay={80}>
           <span className="eyebrow">If your whole history were one person</span>
-          <div className="persona-emoji" aria-hidden>
-            {overallPersona.emoji}
-          </div>
           <h2>{overallPersona.title}</h2>
           <p className="ink-2">{overallPersona.blurb}</p>
         </Reveal>
@@ -82,7 +79,7 @@ export function Overview({ report }: { report: Report }) {
               key={s.id}
               className="seg"
               style={{ flexGrow: s.count, background: topicColor(report, s.id) }}
-              onPointerEnter={(e) => tt.show(<><b>{topicDef(s.id).emoji} {topicDef(s.id).label}</b> · {pct(s.count / meta.total)} ({num(s.count)})</>, e.clientX, e.clientY)}
+              onPointerEnter={(e) => tt.show(<><b>{topicDef(s.id).label}</b> · {pct(s.count / meta.total)} ({num(s.count)})</>, e.clientX, e.clientY)}
               onPointerLeave={tt.hide}
             />
           ))}
@@ -92,7 +89,7 @@ export function Overview({ report }: { report: Report }) {
             <li key={s.id}>
               <span className="dot" style={{ background: topicColor(report, s.id) }} />
               <span>
-                {topicDef(s.id).emoji} {topicDef(s.id).label}
+                {topicDef(s.id).label}
               </span>
               <b className="tabular">{pct(s.count / meta.total)}</b>
             </li>
@@ -103,7 +100,7 @@ export function Overview({ report }: { report: Report }) {
       {milestones.firstEver && (
         <Reveal className="first-ever card" delay={140}>
           <div className="first-ever-icon" aria-hidden>
-            ⏮
+            ◀◀
           </div>
           <div>
             <span className="eyebrow">The very first {firstLabel(milestones.firstEver.source)} in your history · {date(milestones.firstEver.t ?? meta.first, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>

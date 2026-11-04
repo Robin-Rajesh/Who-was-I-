@@ -51,7 +51,6 @@ function YearCard({ report, y }: { report: Report; y: YearSummary }) {
       const blob = await renderShareCard({
         kicker: report.meta.sources.length === 1 ? `my year on ${sourceDef(report.meta.sources[0].id).label}` : 'my year, played back',
         title: String(y.year),
-        emoji: y.persona.emoji,
         persona: y.persona.title,
         blurb: y.persona.blurb,
         stats: [
@@ -83,13 +82,10 @@ function YearCard({ report, y }: { report: Report; y: YearSummary }) {
     <div className="year-card">
       <Reveal className="year-main card">
         <div className="year-head">
-          <span className="year-big gradient-text">{y.year}</span>
+          <span className="year-big">{y.year}</span>
           {y.partial && <span className="badge">Partial year</span>}
         </div>
         <div className="year-persona">
-          <span className="persona-emoji sm" aria-hidden>
-            {y.persona.emoji}
-          </span>
           <div>
             <h3>{y.persona.title}</h3>
             <p className="ink-2">{y.persona.blurb}</p>

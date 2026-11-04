@@ -18,10 +18,10 @@ export function Eras({ report }: { report: Report }) {
             key={i}
             href={`#era-${i}`}
             className="era-strip-seg"
-            style={{ flexGrow: e.end - e.start + 1, background: e.topTopics[0] ? topicColor(report, e.topTopics[0].id) : 'var(--s-other)' }}
+            style={{ flexGrow: e.end - e.start + 1, background: topicColor(report, e.lead) }}
             title={`${e.name} (${e.startLabel} – ${e.endLabel})`}
           >
-            <span>{(e.end - e.start + 1) / totalMonths > 0.08 ? e.emoji : ''}</span>
+            <span>{(e.end - e.start + 1) / totalMonths > 0.06 ? String(i + 1).padStart(2, '0') : ''}</span>
           </a>
         ))}
       </Reveal>
@@ -30,17 +30,17 @@ export function Eras({ report }: { report: Report }) {
         {eras.map((e, i) => (
           <Reveal as="li" key={i} className="era" delay={40}>
             <div className="era-rail" aria-hidden>
-              <span className="era-dot" style={{ background: e.topTopics[0] ? topicColor(report, e.topTopics[0].id) : 'var(--s-other)' }} />
+              <span className="era-dot" style={{ background: topicColor(report, e.lead) }} />
             </div>
             <article className="era-card card" id={`era-${i}`}>
               <div className="era-when">
-                <span className="era-index">Era {i + 1}</span>
+                <span className="era-index">Era {String(i + 1).padStart(2, '0')}</span>
                 <span>
                   {e.startLabel} – {i === eras.length - 1 ? 'now' : e.endLabel}
                 </span>
               </div>
               <h3>
-                <span aria-hidden>{e.emoji}</span> {e.name}
+                {e.name}
               </h3>
               <p className="ink-2">
                 {e.tagline} · {num(e.count)} {report.vocab.items}

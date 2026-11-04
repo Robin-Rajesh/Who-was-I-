@@ -14,7 +14,6 @@ export function TopicChip({ report, id, extra }: { report: Report; id: TopicId; 
   return (
     <span className="chip">
       <span className="dot" style={{ background: topicColor(report, id) }} aria-hidden />
-      <span aria-hidden>{def.emoji}</span>
       {def.label}
       {extra != null && <span className="muted tabular" style={{ fontWeight: 500 }}>{extra}</span>}
     </span>

@@ -19,22 +19,22 @@ interface Props {
 }
 
 const PREVIEW_ERAS = [
-  { name: 'The Minecraft Era', years: '2015–17', emoji: '🎮', slot: 1 },
-  { name: 'The Anime Era', years: '2017–18', emoji: '🍥', slot: 2 },
-  { name: 'The Study Era', years: '2019', emoji: '📚', slot: 3 },
-  { name: 'The Sourdough Era', years: '2020', emoji: '🍳', slot: 4 },
-  { name: 'The Crypto Era', years: '2021', emoji: '📈', slot: 5 },
-  { name: 'The Travel Era', years: '2022', emoji: '✈️', slot: 6 },
-  { name: 'The AI Era', years: '2023–now', emoji: '🧑‍💻', slot: 7 },
+  { name: 'The Minecraft Era', years: '2015–17', slot: 1 },
+  { name: 'The Anime Era', years: '2017–18', slot: 2 },
+  { name: 'The Study Era', years: '2019', slot: 3 },
+  { name: 'The Sourdough Era', years: '2020', slot: 4 },
+  { name: 'The Crypto Era', years: '2021', slot: 5 },
+  { name: 'The Travel Era', years: '2022', slot: 6 },
+  { name: 'The AI Era', years: '2023–now', slot: 7 },
 ];
 
 const FEATURES = [
-  { emoji: '🗺️', title: 'Your eras', body: 'We find the moments your taste shifted across every platform and name each chapter of your life, from “The Minecraft Era” to whatever you’re in now.' },
-  { emoji: '🌊', title: 'The river of you', body: 'Watch your interests rise and fade month by month, all the way back to the first video you ever watched.' },
-  { emoji: '💌', title: 'Letters from past you', body: 'Every year gets a persona, signature words and a short letter written from what that version of you watched.' },
-  { emoji: '👻', title: 'Abandoned obsessions', body: 'The channels, artists and shows you binged and then never went back to, plus the ones you came back to years later.' },
-  { emoji: '🌙', title: 'Your rhythm', body: 'Were you a 2am rabbit-holer who became a 7am learner? See exactly when you watched, year by year.' },
-  { emoji: '⏳', title: 'Time machine', body: '“On this day” memories, any date in your history, and a search that shows when an interest peaked.' },
+  { title: 'Your eras', body: 'We find the moments your taste shifted across every platform and name each chapter of your life, from “The Minecraft Era” to whatever you’re in now.' },
+  { title: 'The river of you', body: 'Watch your interests rise and fade month by month, all the way back to the first video you ever watched.' },
+  { title: 'Letters from past you', body: 'Every year gets a persona, signature words and a short letter written from what that version of you watched.' },
+  { title: 'Abandoned obsessions', body: 'The channels, artists and shows you binged and then never went back to, plus the ones you came back to years later.' },
+  { title: 'Your rhythm', body: 'Were you a 2am rabbit-holer who became a 7am learner? See exactly when you watched, year by year.' },
+  { title: 'Time machine', body: '“On this day” memories, any date in your history, and a search that shows when an interest peaked.' },
 ];
 
 const FAQ = [
@@ -126,112 +126,118 @@ export function Landing(props: Props) {
 
       <main>
         <section className="hero wrap">
-          <div className="hero-copy">
-            <Reveal>
-              <span className="pill">
-                <Icon name="lock" size={14} /> 100% private · runs entirely in your browser
-              </span>
-            </Reveal>
-            <Reveal delay={80}>
-              <h1>
-                It wasn’t just a phase.
-                <br />
-                <span className="gradient-text">It was all of them.</span>
-              </h1>
-            </Reveal>
-            <Reveal delay={160}>
+          <Reveal className="hero-meta mono">
+            <span className="rec">
+              <i aria-hidden /> REC
+            </span>
+            <span>Private · runs in your browser · nothing is uploaded</span>
+          </Reveal>
+          <div className="hero-grid">
+            <div className="hero-copy">
+              <Reveal delay={60}>
+                <h1 className="hero-title">
+                  It wasn’t just a phase. <span className="accent-text">It was all of them.</span>
+                </h1>
+              </Reveal>
+              <Reveal delay={140}>
               <p className="lede">
-                Drop in your YouTube, Spotify, Netflix, Instagram or TikTok history and meet every version of you: your
-                eras, your abandoned obsessions, the 2am rabbit holes, and how much you’ve changed from one year to the next.
+                Drop in your watch, listen and scroll history and meet every version of you: your eras, your abandoned
+                obsessions, the 2am rabbit holes, and how much you changed from one year to the next.
               </p>
-            </Reveal>
-            <Reveal delay={200}>
-              <ul className="works-with" aria-label="Works with">
-                {SOURCES.map((src) => (
-                  <li key={src.id}>
-                    <span className="dot" style={{ background: src.color }} aria-hidden />
+              <p className="works-with mono" aria-label="Works with">
+                <span className="muted">Works with</span>{' '}
+                {SOURCES.map((src, i) => (
+                  <span key={src.id}>
+                    {i > 0 && <span className="muted"> / </span>}
                     {src.label}
-                  </li>
+                  </span>
                 ))}
-              </ul>
-            </Reveal>
-          </div>
+              </p>
+              </Reveal>
+            </div>
 
-          <Reveal delay={220} className="upload-col">
-            {saved && (
-              <div className="resume card">
-                <div>
-                  <strong>Welcome back.</strong>
-                  <span className="ink-2">
-                    {' '}
-                    Your history ({num(saved.count)} items) is saved on this device from {date(saved.savedAt)}.
+            <Reveal delay={200} className="upload-col">
+              {saved && (
+                <div className="resume card">
+                  <div>
+                    <strong>Welcome back.</strong>
+                    <span className="ink-2">
+                      {' '}
+                      Your history ({num(saved.count)} items) is saved on this device from {date(saved.savedAt)}.
+                    </span>
+                  </div>
+                  <div className="resume-actions">
+                    <button className="btn btn-primary btn-sm" onClick={onResume}>
+                      Open my report <Icon name="arrow-right" size={16} />
+                    </button>
+                    <button className="btn btn-ghost btn-sm" onClick={onForget}>
+                      <Icon name="trash" size={16} /> Forget
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div className="error card" role="alert">
+                  <strong>That didn’t work.</strong> <span>{error}</span>
+                </div>
+              )}
+
+              <div
+                className={`tape ${dragging ? 'is-dragging' : ''}`}
+                role="button"
+                tabIndex={0}
+                onClick={() => inputRef.current?.click()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    inputRef.current?.click();
+                  }
+                }}
+                aria-label="Choose your export files"
+              >
+                <div className="tape-label">
+                  <div className="tape-head mono">
+                    <span>Side A</span>
+                    <span>{dragging ? 'Let go' : 'Insert your history'}</span>
+                    <span>C-90</span>
+                  </div>
+                  <div className="tape-window" aria-hidden>
+                    <span className="reel" />
+                    <span className="tape-strip" />
+                    <span className="reel" />
+                  </div>
+                  <h3>Drop your exports here</h3>
+                  <p className="ink-2">YouTube, Spotify, Netflix, Instagram or TikTok. Zips are fine, several at once is fine.</p>
+                  <span className="btn btn-primary">
+                    <Icon name="file" size={18} /> Choose files
                   </span>
                 </div>
-                <div className="resume-actions">
-                  <button className="btn btn-primary btn-sm" onClick={onResume}>
-                    Open my report <Icon name="arrow-right" size={16} />
-                  </button>
-                  <button className="btn btn-ghost btn-sm" onClick={onForget}>
-                    <Icon name="trash" size={16} /> Forget
-                  </button>
-                </div>
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept=".json,.html,.htm,.zip,.csv,application/json,text/html,text/csv,application/zip"
+                  multiple
+                  hidden
+                  onChange={(e) => {
+                    const files = [...(e.target.files ?? [])];
+                    e.target.value = '';
+                    if (files.length) onFiles(files);
+                  }}
+                />
               </div>
-            )}
 
-            {error && (
-              <div className="error card" role="alert">
-                <strong>That didn’t work.</strong> <span>{error}</span>
+              <div className="upload-meta">
+                <label className="check">
+                  <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+                  <span>Remember on this device</span>
+                </label>
+                <button className="link-btn" onClick={onSample}>
+                  No export yet? Play the sample tape <Icon name="arrow-right" size={15} />
+                </button>
               </div>
-            )}
-
-            <div
-              className={`dropzone card ${dragging ? 'is-dragging' : ''}`}
-              role="button"
-              tabIndex={0}
-              onClick={() => inputRef.current?.click()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  inputRef.current?.click();
-                }
-              }}
-              aria-label="Choose your export files"
-            >
-              <div className="drop-icon">
-                <Icon name="upload" size={26} />
-              </div>
-              <h3>Drop your history here</h3>
-              <p className="ink-2">
-                Your data export from any of the platforms above. <code>.zip</code> files are fine, and you can drop several at once.
-              </p>
-              <span className="btn btn-primary">
-                <Icon name="file" size={18} /> Choose files
-              </span>
-              <input
-                ref={inputRef}
-                type="file"
-                accept=".json,.html,.htm,.zip,.csv,application/json,text/html,text/csv,application/zip"
-                multiple
-                hidden
-                onChange={(e) => {
-                  const files = [...(e.target.files ?? [])];
-                  e.target.value = '';
-                  if (files.length) onFiles(files);
-                }}
-              />
-            </div>
-
-            <div className="upload-meta">
-              <label className="check">
-                <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-                <span>Remember on this device</span>
-              </label>
-              <span className="muted">·</span>
-              <button className="link-btn" onClick={onSample}>
-                <Icon name="sparkle" size={16} /> No file yet? Try a sample life
-              </button>
-            </div>
-          </Reveal>
+            </Reveal>
+          </div>
         </section>
 
         <section className="ribbon" aria-label="Example eras">
@@ -239,9 +245,8 @@ export function Landing(props: Props) {
             {[...PREVIEW_ERAS, ...PREVIEW_ERAS].map((e, i) => (
               <div className="ribbon-item" key={i} aria-hidden={i >= PREVIEW_ERAS.length}>
                 <span className="ribbon-dot" style={{ background: `var(--s${e.slot})` }} />
-                <span className="ribbon-emoji">{e.emoji}</span>
                 <span className="ribbon-name">{e.name}</span>
-                <span className="muted">{e.years}</span>
+                <span className="ribbon-years">{e.years}</span>
               </div>
             ))}
           </div>
@@ -264,20 +269,18 @@ export function Landing(props: Props) {
             <span className="eyebrow">What you’ll discover</span>
             <h2>A mirror with a memory</h2>
           </Reveal>
-          <div className="features">
+          <ol className="features">
             {FEATURES.map((f, i) => (
-              <Reveal key={f.title} className="feature card" delay={i * 50}>
-                <span className="feature-emoji" aria-hidden>
-                  {f.emoji}
-                </span>
+              <Reveal as="li" key={f.title} className="feature" delay={i * 50}>
+                <span className="feature-n mono">{String(i + 1).padStart(2, '0')}</span>
                 <h3>{f.title}</h3>
                 <p className="ink-2">{f.body}</p>
               </Reveal>
             ))}
-          </div>
+          </ol>
           <Reveal className="cta-row">
             <button className="btn btn-primary" onClick={onSample}>
-              <Icon name="sparkle" size={18} /> See a sample report
+              Play the sample tape <Icon name="play" size={16} />
             </button>
             <button className="btn" onClick={() => inputRef.current?.click()}>
               <Icon name="upload" size={18} /> Use my own history
@@ -293,13 +296,13 @@ export function Landing(props: Props) {
             <div>
               <h2>Your history stays yours.</h2>
               <p className="ink-2">
-                There’s no server, account or analytics. Your file is read by your browser, analysed in a background
+                There’s no server, account or analytics. Your files are read by your browser, analysed in a background
                 worker and shown to you. Nothing is uploaded, so there’s nothing for anyone to leak.
               </p>
             </div>
             <ul className="privacy-points">
               <li><Icon name="check" size={16} /> Runs offline after the page loads</li>
-              <li><Icon name="check" size={16} /> No Google login, ever</li>
+              <li><Icon name="check" size={16} /> No logins or passwords, ever</li>
               <li><Icon name="check" size={16} /> One click to forget everything</li>
             </ul>
           </Reveal>
@@ -345,18 +348,13 @@ export function Landing(props: Props) {
   );
 }
 
+/** A record light on a tape-black tile. */
 export function Logo({ size = 28 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden className="logo">
-      <defs>
-        <linearGradient id="wwi-g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#9085e9" />
-          <stop offset="1" stopColor="#eb6834" />
-        </linearGradient>
-      </defs>
-      <rect width="64" height="64" rx="16" fill="var(--surface-2)" />
-      <circle cx="26" cy="32" r="13" fill="none" stroke="url(#wwi-g)" strokeWidth="5" />
-      <circle cx="38" cy="32" r="13" fill="none" stroke="url(#wwi-g)" strokeWidth="5" opacity=".55" />
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden className="logo">
+      <rect width="32" height="32" rx="4" fill="var(--ink)" />
+      <circle cx="16" cy="16" r="7" fill="var(--accent)" />
+      <circle cx="16" cy="16" r="10.5" fill="none" stroke="var(--accent)" strokeWidth="1.5" opacity=".45" />
     </svg>
   );
 }
@@ -372,7 +370,7 @@ function ExportGuide() {
       <ol className="steps" key={id}>
         {src.steps.map((st, i) => (
           <Reveal as="li" className="step card" delay={i * 50} key={st.title}>
-            <span className="step-n">{i + 1}</span>
+            <span className="step-n">{String(i + 1).padStart(2, '0')}</span>
             <h3>{st.title}</h3>
             <p className="ink-2">{st.body}</p>
           </Reveal>

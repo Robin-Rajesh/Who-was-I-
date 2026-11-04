@@ -24,7 +24,7 @@ export function Drift({ report, onPick }: { report: Report; onPick: (y: number) 
   const biggest = withDrift.reduce((a, b) => ((b.drift ?? 0) > (a.drift ?? 0) ? b : a));
   const calmest = withDrift.reduce((a, b) => ((b.drift ?? 100) < (a.drift ?? 100) ? b : a));
   const avg = Math.round(withDrift.reduce((s, y) => s + (y.drift ?? 0), 0) / withDrift.length);
-  const desc = (ids: { id: Parameters<typeof topicDef>[0] }[]) => ids.map((g) => `${topicDef(g.id).emoji} ${lowerLabel(topicDef(g.id).label)}`).join(' and ');
+  const desc = (ids: { id: Parameters<typeof topicDef>[0] }[]) => ids.map((g) => lowerLabel(topicDef(g.id).label)).join(' and ');
   return (
     <section className="section wrap" id="drift">
       <SectionHead eyebrow="Drift" title="How much you changed, year to year">

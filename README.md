@@ -42,7 +42,7 @@ what else you were into instead of reading "music" for every year.
 | 💾 **Remember on this device** | Optional local storage in IndexedDB, with one-click “Forget my data”. |
 | ✨ **Sample life** | A fictional 11-year history so anyone can try it before exporting their own data. |
 
-Light and dark themes, fully responsive, keyboard accessible, and reduced-motion aware. Every chart has a data-table view.
+Designed as a personal tape archive: newsprint and ink, condensed poster type, monospace timestamps and one record-light accent. Light and dark themes, fully responsive, keyboard accessible, and reduced-motion aware. Every chart has a data-table view.
 
 ## Why exports instead of logging in?
 
@@ -110,7 +110,7 @@ React UI (charts are hand-built SVG with d3-shape; share cards are drawn on <can
 
 ## Tech
 
-React 18 · TypeScript · Vite · d3-shape · fflate · Vitest · Fraunces & Inter (self-hosted via Fontsource)
+React 18 · TypeScript · Vite · d3-shape · fflate · Vitest · Archivo (variable width) & IBM Plex Mono, self-hosted via Fontsource
 
 ---
 
