@@ -1,4 +1,4 @@
-import type { DataSource } from './types';
+import type { SourceId } from './sources';
 
 export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 export const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -44,12 +44,21 @@ export function duration(days: number): string {
 }
 
 /** Links only make sense for real exports – the sample data is made up. */
-export function videoUrl(videoId: string | null, source: DataSource): string | null {
-  return videoId && source !== 'sample' ? `https://www.youtube.com/watch?v=${videoId}` : null;
+export function link(url: string | null | undefined, sample: boolean): string | null {
+  return url && !sample ? url : null;
 }
 
-export function channelUrl(url: string | null, source: DataSource): string | null {
-  return url && source !== 'sample' ? url : null;
+/** Label for an entry whose title is missing. */
+export function untitled(source: SourceId): string {
+  return source === 'youtube' ? 'A video that’s no longer available' : 'Untitled';
+}
+
+/** "1,234 hours" / "45 minutes" from milliseconds. */
+export function listenTime(ms: number): { value: string; unit: string } {
+  const h = ms / 3_600_000;
+  if (h >= 48) return { value: compact(h), unit: 'hours' };
+  if (h >= 1) return { value: h.toFixed(1), unit: 'hours' };
+  return { value: String(Math.round(ms / 60_000)), unit: 'minutes' };
 }
 
 export const plural = (n: number, word: string, pluralWord = `${word}s`) => `${num(n)} ${n === 1 ? word : pluralWord}`;

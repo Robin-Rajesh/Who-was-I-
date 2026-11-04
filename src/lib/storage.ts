@@ -1,4 +1,4 @@
-import type { DataSource, WatchEntry } from './types';
+import type { WatchEntry } from './types';
 
 /**
  * Optional "remember on this device" storage. Everything stays in this
@@ -11,9 +11,21 @@ const KEY = 'latest';
 
 export interface SavedHistory {
   entries: WatchEntry[];
-  source: DataSource;
-  fileName: string | null;
   savedAt: number;
+}
+
+/** Histories saved by the first (YouTube-only) version lacked source/kind/url. */
+function migrate(entries: WatchEntry[]): WatchEntry[] {
+  if (!entries.length || entries[0].source) return entries;
+  return entries.map((e) => {
+    const old = e as WatchEntry & { music?: boolean };
+    return {
+      ...e,
+      source: 'youtube',
+      kind: old.music ? 'music' : 'video',
+      url: e.videoId ? `https://www.youtube.com/watch?v=${e.videoId}` : null,
+    };
+  });
 }
 
 function open(): Promise<IDBDatabase> {
@@ -50,15 +62,16 @@ export async function saveHistory(h: SavedHistory): Promise<boolean> {
 
 export async function loadHistory(): Promise<SavedHistory | null> {
   try {
-    return ((await tx('readonly', (s) => s.get(KEY))) as SavedHistory | undefined) ?? null;
+    const h = ((await tx('readonly', (s) => s.get(KEY))) as SavedHistory | undefined) ?? null;
+    return h ? { ...h, entries: migrate(h.entries) } : null;
   } catch {
     return null;
   }
 }
 
-export async function peekHistory(): Promise<{ count: number; savedAt: number; source: DataSource } | null> {
+export async function peekHistory(): Promise<{ count: number; savedAt: number } | null> {
   const h = await loadHistory();
-  return h ? { count: h.entries.length, savedAt: h.savedAt, source: h.source } : null;
+  return h ? { count: h.entries.length, savedAt: h.savedAt } : null;
 }
 
 export async function forgetHistory(): Promise<void> {

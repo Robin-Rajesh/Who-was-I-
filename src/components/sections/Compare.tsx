@@ -63,21 +63,21 @@ export function Compare({ report, entries }: { report: Report; entries: WatchEnt
           <span className="compare-year" style={{ color: 'var(--s1)' }}>{a}</span>
           <span className="persona-emoji sm" aria-hidden>{ya.persona.emoji}</span>
           <h3>{ya.persona.title}</h3>
-          <p className="muted">{num(ya.count)} videos · {num(ya.uniqueChannels)} channels</p>
+          <p className="muted">{num(ya.count)} {report.vocab.items} · {num(ya.uniqueChannels)} {report.vocab.creators}</p>
         </Reveal>
         <Reveal className="card compare-score" delay={60}>
           <span className="eyebrow">Similarity</span>
           <strong className="score-big">{sim}%</strong>
           <p className="ink-2">{verdict}</p>
           <p className="muted">
-            {num(diff.sharedCount)} of {num(diff.union)} channels in common
+            {num(diff.sharedCount)} of {num(diff.union)} {report.vocab.creators} in common
           </p>
         </Reveal>
         <Reveal className="card compare-person" delay={120}>
           <span className="compare-year" style={{ color: 'var(--s2)' }}>{b}</span>
           <span className="persona-emoji sm" aria-hidden>{yb.persona.emoji}</span>
           <h3>{yb.persona.title}</h3>
-          <p className="muted">{num(yb.count)} videos · {num(yb.uniqueChannels)} channels</p>
+          <p className="muted">{num(yb.count)} {report.vocab.items} · {num(yb.uniqueChannels)} {report.vocab.creators}</p>
         </Reveal>
       </div>
 
@@ -119,15 +119,15 @@ export function Compare({ report, entries }: { report: Report; entries: WatchEnt
       <div className="compare-lists">
         <Reveal className="card year-box">
           <h4 className="mini-head">Only in {a}</h4>
-          <ChannelList items={diff.onlyA} empty="Nothing. Everything you watched carried over." />
+          <ChannelList items={diff.onlyA} empty="Nothing. Everything carried over." />
         </Reveal>
         <Reveal className="card year-box" delay={60}>
           <h4 className="mini-head">Survived both</h4>
-          <ChannelList items={diff.shared.slice(0, 6).map((s) => [s.name, s.a + s.b] as [string, number])} empty="Not a single channel in common." />
+          <ChannelList items={diff.shared.slice(0, 6).map((s) => [s.name, s.a + s.b] as [string, number])} empty={`Not a single ${report.vocab.creator} in common.`} />
         </Reveal>
         <Reveal className="card year-box" delay={120}>
           <h4 className="mini-head">New by {b}</h4>
-          <ChannelList items={diff.onlyB} empty="No new channels." />
+          <ChannelList items={diff.onlyB} empty={`No new ${report.vocab.creators}.`} />
         </Reveal>
       </div>
     </section>

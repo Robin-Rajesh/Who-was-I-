@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Theme } from '../App';
-import type { DataSource } from '../lib/types';
 import { date, num } from '../lib/format';
-import { Icon, Reveal } from './ui';
+import { Icon, Reveal, Segmented } from './ui';
+import { SOURCES, sourceDef, type SourceId } from '../lib/sources';
 import { ThemeToggle } from './ThemeToggle';
 
 interface Props {
@@ -10,7 +10,7 @@ interface Props {
   onSample: () => void;
   onResume: () => void;
   onForget: () => void;
-  saved: { count: number; savedAt: number; source: DataSource } | null;
+  saved: { count: number; savedAt: number } | null;
   error?: string;
   remember: boolean;
   setRemember: (v: boolean) => void;
@@ -29,10 +29,10 @@ const PREVIEW_ERAS = [
 ];
 
 const FEATURES = [
-  { emoji: '🗺️', title: 'Your eras', body: 'We find the moments your taste shifted and name each chapter of your life, from “The Minecraft Era” to whatever you’re in now.' },
+  { emoji: '🗺️', title: 'Your eras', body: 'We find the moments your taste shifted across every platform and name each chapter of your life, from “The Minecraft Era” to whatever you’re in now.' },
   { emoji: '🌊', title: 'The river of you', body: 'Watch your interests rise and fade month by month, all the way back to the first video you ever watched.' },
   { emoji: '💌', title: 'Letters from past you', body: 'Every year gets a persona, signature words and a short letter written from what that version of you watched.' },
-  { emoji: '👻', title: 'Abandoned obsessions', body: 'The channels you binged and then never went back to, plus the ones you came back to years later.' },
+  { emoji: '👻', title: 'Abandoned obsessions', body: 'The channels, artists and shows you binged and then never went back to, plus the ones you came back to years later.' },
   { emoji: '🌙', title: 'Your rhythm', body: 'Were you a 2am rabbit-holer who became a 7am learner? See exactly when you watched, year by year.' },
   { emoji: '⏳', title: 'Time machine', body: '“On this day” memories, any date in your history, and a search that shows when an interest peaked.' },
 ];
@@ -43,20 +43,24 @@ const FAQ = [
     a: 'No. Who Was I? is a static web page. Your file is opened and analysed inside your own browser (in a background worker) and is never sent to any server. You can even disconnect from the internet after the page loads and it still works.',
   },
   {
-    q: 'Why do I need Google Takeout? Can’t you just log in to YouTube?',
-    a: 'YouTube’s public API stopped giving apps access to watch history years ago. Google Takeout is the official way to download your own data, and it also means you never have to give this site your Google password.',
+    q: 'Why exports? Can’t I just log in?',
+    a: 'Login APIs don’t give apps your full history: YouTube’s doesn’t expose watch history at all, and Spotify’s only shows your last 50 songs. The official data exports are the only way to get everything, and they mean you never give this site a password.',
   },
   {
-    q: 'JSON or HTML?',
-    a: 'Both work. JSON is faster and more reliable, so if you can, switch “History format” to JSON when you create the export. You can also drop the whole Takeout .zip and we’ll find the file for you.',
+    q: 'Can I combine several platforms?',
+    a: 'Yes, and it’s the best part. Drop several exports at once, or add more later with “Add a platform” in your report. Your eras, rhythm and records then span everything, and you can filter back to one platform at any time.',
+  },
+  {
+    q: 'Which files do you read?',
+    a: 'YouTube: watch-history.json or .html. Spotify: Streaming_History_*.json (extended) or StreamingHistory*.json. Netflix: ViewingActivity.csv or NetflixViewingHistory.csv. Instagram: the JSON export (likes, saves, comments, follows, recently viewed). TikTok: user_data.json. Just drop the zip and we’ll find the right files inside.',
   },
   {
     q: 'My history only goes back a few years. Why?',
-    a: 'Takeout only contains history that is still saved in your account. If watch history was paused or auto-delete was turned on, older years won’t be there.',
+    a: 'Exports only contain history the platform still keeps. YouTube skips anything from while history was paused, Spotify’s quick “Account data” covers one year (ask for “Extended streaming history” instead), and Instagram only exports recently viewed posts.',
   },
   {
     q: 'How are topics decided?',
-    a: 'Takeout doesn’t include categories, so we classify each channel from its name and the titles you watched, using keyword patterns for more than 20 topics. It isn’t perfect, but it’s surprisingly good. Channels we can’t place go under “Everything else”.',
+    a: 'Exports don’t include categories, so we classify each channel, artist, show or account from its name and the titles you played, using keyword patterns for more than 20 topics. Spotify artists count as music and Netflix titles as film & TV unless their names say otherwise. It isn’t perfect, but it’s surprisingly good.',
   },
   {
     q: 'What does “remember on this device” do?',
@@ -137,9 +141,19 @@ export function Landing(props: Props) {
             </Reveal>
             <Reveal delay={160}>
               <p className="lede">
-                Drop in your YouTube watch history and meet every version of you: your eras, your abandoned
-                obsessions, the 2am rabbit holes, and how much you’ve changed from one year to the next.
+                Drop in your YouTube, Spotify, Netflix, Instagram or TikTok history and meet every version of you: your
+                eras, your abandoned obsessions, the 2am rabbit holes, and how much you’ve changed from one year to the next.
               </p>
+            </Reveal>
+            <Reveal delay={200}>
+              <ul className="works-with" aria-label="Works with">
+                {SOURCES.map((src) => (
+                  <li key={src.id}>
+                    <span className="dot" style={{ background: src.color }} aria-hidden />
+                    {src.label}
+                  </li>
+                ))}
+              </ul>
             </Reveal>
           </div>
 
@@ -150,7 +164,7 @@ export function Landing(props: Props) {
                   <strong>Welcome back.</strong>
                   <span className="ink-2">
                     {' '}
-                    Your history ({num(saved.count)} videos) is saved on this device from {date(saved.savedAt)}.
+                    Your history ({num(saved.count)} items) is saved on this device from {date(saved.savedAt)}.
                   </span>
                 </div>
                 <div className="resume-actions">
@@ -181,22 +195,22 @@ export function Landing(props: Props) {
                   inputRef.current?.click();
                 }
               }}
-              aria-label="Choose your watch history file"
+              aria-label="Choose your export files"
             >
               <div className="drop-icon">
                 <Icon name="upload" size={26} />
               </div>
-              <h3>Drop your watch history here</h3>
+              <h3>Drop your history here</h3>
               <p className="ink-2">
-                <code>watch-history.json</code>, <code>.html</code> or the whole Takeout <code>.zip</code>
+                Your data export from any of the platforms above. <code>.zip</code> files are fine, and you can drop several at once.
               </p>
               <span className="btn btn-primary">
-                <Icon name="file" size={18} /> Choose file
+                <Icon name="file" size={18} /> Choose files
               </span>
               <input
                 ref={inputRef}
                 type="file"
-                accept=".json,.html,.htm,.zip,application/json,text/html,application/zip"
+                accept=".json,.html,.htm,.zip,.csv,application/json,text/html,text/csv,application/zip"
                 multiple
                 hidden
                 onChange={(e) => {
@@ -235,47 +249,14 @@ export function Landing(props: Props) {
 
         <section className="section wrap" id="how">
           <Reveal className="section-head">
-            <span className="eyebrow">Getting your file · about 2 minutes of clicking</span>
-            <h2>Four steps to meet your past selves</h2>
-            <p>Google keeps your watch history and will hand you a copy. Here’s exactly how to ask for it.</p>
+            <span className="eyebrow">Getting your data · a few minutes of clicking</span>
+            <h2>Ask each platform for your history</h2>
+            <p>
+              Every big platform has to hand you a copy of your data. Here’s exactly where to ask. Start with one; you can add the
+              others to your report whenever they arrive.
+            </p>
           </Reveal>
-          <ol className="steps">
-            <Reveal as="li" className="step card">
-              <span className="step-n">1</span>
-              <h3>Open Google Takeout</h3>
-              <p className="ink-2">
-                Go to{' '}
-                <a href="https://takeout.google.com/" target="_blank" rel="noreferrer noopener">
-                  takeout.google.com
-                </a>{' '}
-                and click <b>Deselect all</b>, then scroll down and tick only <b>YouTube and YouTube Music</b>.
-              </p>
-            </Reveal>
-            <Reveal as="li" className="step card" delay={60}>
-              <span className="step-n">2</span>
-              <h3>Choose just your history</h3>
-              <p className="ink-2">
-                Click <b>All YouTube data included</b>, deselect everything, and tick only <b>history</b>. That keeps the
-                export small, with no videos.
-              </p>
-            </Reveal>
-            <Reveal as="li" className="step card" delay={120}>
-              <span className="step-n">3</span>
-              <h3>Switch to JSON (recommended)</h3>
-              <p className="ink-2">
-                Click <b>Multiple formats</b> and change <b>History</b> from HTML to <b>JSON</b>. HTML works too, but
-                JSON is faster and more accurate.
-              </p>
-            </Reveal>
-            <Reveal as="li" className="step card" delay={180}>
-              <span className="step-n">4</span>
-              <h3>Export, download, drop</h3>
-              <p className="ink-2">
-                Click <b>Next step → Create export</b>. Google emails you a link (usually within minutes). Drop the
-                .zip here, or the <code>watch-history</code> file inside it.
-              </p>
-            </Reveal>
-          </ol>
+          <ExportGuide />
         </section>
 
         <section className="section wrap">
@@ -349,7 +330,7 @@ export function Landing(props: Props) {
         <span>
           <Logo size={20} /> Who Was I?
         </span>
-        <span className="muted">Not affiliated with YouTube or Google. Made for the curious.</span>
+        <span className="muted">Not affiliated with YouTube, Google, Spotify, Netflix, Meta or TikTok. Made for the curious.</span>
       </footer>
 
       {dragging && (
@@ -377,5 +358,34 @@ export function Logo({ size = 28 }: { size?: number }) {
       <circle cx="26" cy="32" r="13" fill="none" stroke="url(#wwi-g)" strokeWidth="5" />
       <circle cx="38" cy="32" r="13" fill="none" stroke="url(#wwi-g)" strokeWidth="5" opacity=".55" />
     </svg>
+  );
+}
+
+function ExportGuide() {
+  const [id, setId] = useState<SourceId>('youtube');
+  const src = sourceDef(id);
+  return (
+    <div className="export-guide">
+      <Reveal className="tab-row">
+        <Segmented label="Platform" value={id} onChange={setId} options={SOURCES.map((x) => ({ value: x.id, label: x.label }))} />
+      </Reveal>
+      <ol className="steps" key={id}>
+        {src.steps.map((st, i) => (
+          <Reveal as="li" className="step card" delay={i * 50} key={st.title}>
+            <span className="step-n">{i + 1}</span>
+            <h3>{st.title}</h3>
+            <p className="ink-2">{st.body}</p>
+          </Reveal>
+        ))}
+      </ol>
+      <div className="guide-foot">
+        <a className="btn btn-sm" href={src.link.href} target="_blank" rel="noreferrer noopener">
+          Open {src.link.label} <Icon name="arrow-right" size={16} />
+        </a>
+        <span className="muted">
+          We read: {src.files}.{src.note ? ` ${src.note}` : ''}
+        </span>
+      </div>
+    </div>
   );
 }

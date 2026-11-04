@@ -1,8 +1,8 @@
 import { num } from '../../lib/format';
 import { useTooltip } from '../ui';
 
-/** Tiny per-year bars for a channel ("how much did I watch them each year?"). */
-export function SparkBars({ values, labels, color = 'var(--s1)', height = 36 }: { values: number[]; labels: (string | number)[]; color?: string; height?: number }) {
+/** Tiny per-year bars for a creator ("how much did I watch them each year?"). */
+export function SparkBars({ values, labels, color = 'var(--s1)', height = 36, unit = 'plays' }: { values: number[]; labels: (string | number)[]; color?: string; height?: number; unit?: string }) {
   const tt = useTooltip();
   const max = Math.max(1, ...values);
   return (
@@ -11,7 +11,7 @@ export function SparkBars({ values, labels, color = 'var(--s1)', height = 36 }: 
         <div
           key={i}
           className="spark-col"
-          onPointerEnter={(e) => tt.show(<><b>{labels[i]}</b> · {num(v)} videos</>, e.clientX, e.clientY)}
+          onPointerEnter={(e) => tt.show(<><b>{labels[i]}</b> · {num(v)} {unit}</>, e.clientX, e.clientY)}
           onPointerLeave={tt.hide}
         >
           <div className="spark-bar" style={{ height: `${v ? Math.max(6, (v / max) * 100) : 0}%`, background: v ? color : 'transparent' }} />

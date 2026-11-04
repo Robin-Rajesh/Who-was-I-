@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { Report, YearSummary } from '../../lib/types';
 import { topicDef } from '../../lib/topics';
-import { MONTHS_LONG, date, hourLabel, num, pct, videoUrl } from '../../lib/format';
+import { MONTHS_LONG, date, hourLabel, link, num, pct, untitled } from '../../lib/format';
+import { sourceDef } from '../../lib/sources';
 import { renderShareCard, shareOrDownload } from '../../lib/shareCard';
 import { Icon, MaybeLink, Reveal, SectionHead, TopicChip, topicColor } from '../ui';
 
@@ -10,7 +11,7 @@ export function Years({ report, year, setYear }: { report: Report; year: number;
   return (
     <section className="section wrap" id="years">
       <SectionHead eyebrow="Year by year" title="Letters from past you">
-        Every year gets a persona, its signature words and a short letter written from what that version of you watched.
+        Every year gets a persona, its signature words and a short letter written from what that version of you was into.
         Pick a year.
       </SectionHead>
       <Reveal className="year-picker" >
@@ -48,14 +49,14 @@ function YearCard({ report, y }: { report: Report; y: YearSummary }) {
     setBusy(true);
     try {
       const blob = await renderShareCard({
-        kicker: 'my year on YouTube',
+        kicker: report.meta.sources.length === 1 ? `my year on ${sourceDef(report.meta.sources[0].id).label}` : 'my year, played back',
         title: String(y.year),
         emoji: y.persona.emoji,
         persona: y.persona.title,
         blurb: y.persona.blurb,
         stats: [
-          { value: num(y.count), label: 'videos' },
-          { value: num(y.uniqueChannels), label: 'channels' },
+          { value: num(y.count), label: report.vocab.items },
+          { value: num(y.uniqueChannels), label: report.vocab.creators },
           { value: num(y.newChannels), label: 'new discoveries' },
         ],
         channels: y.topChannels,
@@ -113,7 +114,7 @@ function YearCard({ report, y }: { report: Report; y: YearSummary }) {
 
       <div className="year-side">
         <Reveal className="card year-box" delay={60}>
-          <h4 className="mini-head">Most watched channels</h4>
+          <h4 className="mini-head">Top {report.vocab.creators}</h4>
           <ol className="bar-list">
             {y.topChannels.slice(0, 7).map((c, i) => {
               const topic = report.channelTopics[c.name] ?? 'other';
@@ -159,18 +160,18 @@ function YearCard({ report, y }: { report: Report; y: YearSummary }) {
         </Reveal>
 
         <Reveal className="card year-box year-facts" delay={140}>
-          <Fact label="Videos" value={num(y.count)} />
-          <Fact label="Days you watched" value={num(y.activeDays)} />
-          <Fact label="New channels" value={num(y.newChannels)} />
+          <Fact label={cap(report.vocab.items)} value={num(y.count)} />
+          <Fact label="Days you showed up" value={num(y.activeDays)} />
+          <Fact label={`New ${report.vocab.creators}`} value={num(y.newChannels)} />
           <Fact label="Peak hour" value={hourLabel(y.peakHour)} />
           <Fact label="After 11pm" value={pct(y.nightShare)} />
           <Fact label="Busiest month" value={MONTHS_LONG[y.busiestMonth]} />
           {y.drift !== null && <Fact label={`Change vs ${y.year - 1}`} value={`${y.drift}%`} />}
           {y.firstVideo && (
             <div className="fact wide">
-              <span className="fact-label">First video of the year · {date(y.firstVideo.t ?? 0, { month: 'short', day: 'numeric' })}</span>
-              <MaybeLink className="fact-link" href={videoUrl(y.firstVideo.videoId, report.meta.source)}>
-                {y.firstVideo.title || 'A video that’s no longer available'}
+              <span className="fact-label">First of the year · {date(y.firstVideo.t ?? 0, { month: 'short', day: 'numeric' })}</span>
+              <MaybeLink className="fact-link" href={link(y.firstVideo.url, report.meta.sample)}>
+                {y.firstVideo.title || untitled(y.firstVideo.source)}
               </MaybeLink>
             </div>
           )}
@@ -188,3 +189,5 @@ function Fact({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

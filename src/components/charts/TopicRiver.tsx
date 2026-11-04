@@ -70,7 +70,7 @@ export function TopicRiver({ report }: { report: Report }) {
     tt.show(
       <>
         <div className="tt-title">
-          {monthLabel(river.months[i])} · {num(total)} videos
+          {monthLabel(river.months[i])} · {num(total)} {report.vocab.items}
         </div>
         {rows.map((r) => (
           <div className="tt-row" key={r.id}>
@@ -113,7 +113,7 @@ export function TopicRiver({ report }: { report: Report }) {
         />
       </div>
       <div ref={ref} className="chart-frame">
-        <svg width={width} height={height} role="img" aria-label="Stacked area chart of the topics you watched each month">
+        <svg width={width} height={height} role="img" aria-label="Stacked area chart of your topics each month">
           <g transform={`translate(${pad.left},${pad.top})`}>
             {yTicks.map((t) => (
               <g key={t}>

@@ -1,12 +1,13 @@
 import type {
-  ChannelRef, ChannelStory, DataSource, Era, Milestones, Persona, Report, TopicShare, VideoRef, WatchEntry, YearSummary,
+  ChannelRef, ChannelStory, Era, Milestones, Persona, Report, SourceCount, TopicShare, VideoRef, WatchEntry, YearSummary,
 } from './types';
-import { OTHER_TOPIC, TOPICS, classifyChannel, lowerLabel, topicDef, type TopicId } from './topics';
+import { vocabFor, type EntryKind, type SourceId, type Vocab } from './sources';
+import { ALL_TOPIC_IDS, classifyChannel, lowerLabel, topicDef, type TopicId } from './topics';
 import { displayWord, hash, tokenize } from './text';
 import { cosine, normalize, optimalSegments } from './segment';
 
 const DAY = 86_400_000;
-const ALL_TOPICS: TopicId[] = [...TOPICS.map((t) => t.id), OTHER_TOPIC.id];
+const ALL_TOPICS: TopicId[] = ALL_TOPIC_IDS;
 const T = ALL_TOPICS.length;
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -16,7 +17,7 @@ interface ChannelAgg {
   name: string;
   url: string | null;
   count: number;
-  musicCount: number;
+  kinds: Record<EntryKind, number>;
   idxs: number[];
   firstT: number;
   lastT: number;
@@ -43,6 +44,15 @@ class Agg {
   months = new Array<number>(12).fill(0);
   days = new Set<number>();
   firstIdx = -1;
+  /** Entries whose time of day is known (feeds `hours`). */
+  timed = 0;
+}
+
+/** Topic for entries that have no creator to classify. */
+const KIND_FALLBACK: Record<EntryKind, TopicId> = { video: 'other', music: 'music', podcast: 'podcasts', show: 'film', social: 'social' };
+
+function refOf(e: WatchEntry, count: number): VideoRef {
+  return { title: e.title, videoId: e.videoId, url: e.url, channel: e.channel, source: e.source, count, t: e.t };
 }
 
 /** Local calendar day number (days since epoch for the local date). */
@@ -78,10 +88,23 @@ function listJoin(items: string[]): string {
   return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
 }
 
-export function analyze(entries: WatchEntry[], source: DataSource, progress: Progress = () => {}): Report {
+export function analyze(entries: WatchEntry[], opts: { sample: boolean }, progress: Progress = () => {}): Report {
   const n = entries.length;
-  if (!n) throw new Error('No watch history found.');
+  if (!n) throw new Error('No history found.');
   progress('Reading the timeline', 0.05);
+  const srcCounts = new Map<SourceId, number>();
+  for (const e of entries) srcCounts.set(e.source, (srcCounts.get(e.source) ?? 0) + 1);
+  const sources: SourceCount[] = [...srcCounts.entries()].sort((a, b) => b[1] - a[1]).map(([id, count]) => ({ id, count }));
+  const vocab = vocabFor(sources.map((s) => s.id));
+  // Music from a dedicated music app alongside other platforms is a soundtrack, not an identity:
+  // it would otherwise top every year simply because songs are short and plentiful.
+  const soundtrack = srcCounts.has('spotify') && srcCounts.size > 1;
+  // TikTok/Instagram activity without a recognisable creator only says "you scrolled" – it shouldn't
+  // headline an era when real topics are available either.
+  const featured = (ts: TopicShare[]) => {
+    const named = ts.filter((t) => t.id !== 'other' && !(soundtrack && t.id === 'music') && t.id !== 'social');
+    return named.length ? named : ts;
+  };
 
   // ---------- 1. Per-entry calendar facts ----------
   const first = entries[0].t;
@@ -121,7 +144,7 @@ export function analyze(entries: WatchEntry[], source: DataSource, progress: Pro
       ci = channels.length;
       chanByName.set(e.channel, ci);
       channels.push({
-        name: e.channel, url: e.channelUrl, count: 0, musicCount: 0, idxs: [], firstT: e.t, lastT: e.t,
+        name: e.channel, url: e.channelUrl, count: 0, kinds: { video: 0, music: 0, podcast: 0, show: 0, social: 0 }, idxs: [], firstT: e.t, lastT: e.t,
         maxGap: 0, gapStart: 0, gapEnd: 0, beforeGap: 0, topic: 'other',
       });
     }
@@ -134,7 +157,7 @@ export function analyze(entries: WatchEntry[], source: DataSource, progress: Pro
       c.beforeGap = c.count;
     }
     c.count++;
-    if (e.music) c.musicCount++;
+    c.kinds[e.kind]++;
     c.idxs.push(i);
     c.lastT = e.t;
     chanOf[i] = ci;
@@ -144,15 +167,18 @@ export function analyze(entries: WatchEntry[], source: DataSource, progress: Pro
   for (const c of channels) {
     const step = Math.max(1, Math.floor(c.idxs.length / 60));
     const titles: string[] = [];
-    for (let k = 0; k < c.idxs.length && titles.length < 60; k += step) titles.push(entries[c.idxs[k]].title);
-    c.topic = classifyChannel(c.name, titles, c.musicCount / c.count);
+    for (let k = 0; k < c.idxs.length && titles.length < 60; k += step) {
+      const e = entries[c.idxs[k]];
+      if (e.kind !== 'social') titles.push(e.title);
+    }
+    const share = (k: EntryKind) => c.kinds[k] / c.count;
+    c.topic = classifyChannel(c.name, titles, { music: share('music'), podcast: share('podcast'), show: share('show'), social: share('social') });
   }
   const topicIdxOf = new Uint8Array(n);
   const topicIndex = new Map<TopicId, number>(ALL_TOPICS.map((t, i) => [t, i]));
-  const otherIdx = topicIndex.get('other')!;
   for (let i = 0; i < n; i++) {
     const ci = chanOf[i];
-    topicIdxOf[i] = ci >= 0 ? topicIndex.get(channels[ci].topic)! : entries[i].music ? topicIndex.get('music')! : otherIdx;
+    topicIdxOf[i] = topicIndex.get(ci >= 0 ? channels[ci].topic : KIND_FALLBACK[entries[i].kind])!;
   }
 
   // ---------- 3. Words ----------
@@ -163,7 +189,9 @@ export function analyze(entries: WatchEntry[], source: DataSource, progress: Pro
   const show = (w: string) => displayWord(w, forms);
   const wordSpread = new Map<string, { last: number; switches: number }>();
   for (let i = 0; i < n; i++) {
-    const toks = entries[i].title ? [...new Set(tokenize(entries[i].title, forms))] : [];
+    // Social entries carry generic action labels ("Liked a post"); song titles are lyrics-ish noise.
+    const k = entries[i].kind;
+    const toks = entries[i].title && k !== 'social' && k !== 'music' ? [...new Set(tokenize(entries[i].title, forms))] : [];
     wordsOf[i] = toks;
     for (const w of toks) {
       wordTotal.set(w, (wordTotal.get(w) ?? 0) + 1);
@@ -195,7 +223,10 @@ export function analyze(entries: WatchEntry[], source: DataSource, progress: Pro
     }
     const vk = videoKey(entries[i]);
     if (vk) a.videos.set(vk, (a.videos.get(vk) ?? 0) + 1);
-    a.hours[hourOf[i]]++;
+    if (!entries[i].approx) {
+      a.hours[hourOf[i]]++;
+      a.timed++;
+    }
     a.weekday[wdOf[i]]++;
     a.months[(monthOf[i] + firstKey) % 12]++;
     a.days.add(dayOf[i]);
@@ -298,12 +329,12 @@ export function analyze(entries: WatchEntry[], source: DataSource, progress: Pro
       topTopics,
       signatureWords,
       mostRewatched,
-      nightShare: a.count ? night / a.count : 0,
-      morningShare: a.count ? morning / a.count : 0,
+      nightShare: a.timed ? night / a.timed : 0,
+      morningShare: a.timed ? morning / a.timed : 0,
       weekendShare: a.count ? weekend / a.count : 0,
       peakHour: argmax(a.hours),
       busiestMonth: argmax(a.months),
-      firstVideo: firstIdx >= 0 ? { title: entries[firstIdx].title, videoId: entries[firstIdx].videoId, channel: entries[firstIdx].channel, count: 1, t: entries[firstIdx].t } : null,
+      firstVideo: firstIdx >= 0 ? refOf(entries[firstIdx], 1) : null,
       persona: { title: '', emoji: '', blurb: '' },
       drift,
       gained,
@@ -311,8 +342,8 @@ export function analyze(entries: WatchEntry[], source: DataSource, progress: Pro
       letter: [],
       partial: isPartial,
     };
-    summary.persona = personaFor(summary.topTopics, summary.nightShare, summary.morningShare, summary.weekendShare, summary.perActiveDay, summary.activeDays, summary.peakHour);
-    summary.letter = letterFor(summary);
+    summary.persona = personaFor(summary.topTopics, summary.nightShare, summary.morningShare, summary.weekendShare, summary.perActiveDay, summary.activeDays, summary.peakHour, vocab, soundtrack);
+    summary.letter = letterFor(summary, vocab);
     return summary;
   });
 
@@ -372,7 +403,8 @@ export function analyze(entries: WatchEntry[], source: DataSource, progress: Pro
     const pick = candidates.find((c) => !usedNames.has(c.label.toLowerCase()) && c.label.length <= 34)!;
     usedNames.add(pick.label.toLowerCase());
     const months = e - s;
-    const top = topTopics[0];
+    const lead = featured(topTopics);
+    const top = lead[0];
     const anthemEntry = topN(a.videos, 1)[0];
     const label = (m: number) => `${MONTH_SHORT[(firstKey + m) % 12]} ${Math.floor((firstKey + m) / 12)}`;
     return {
@@ -381,7 +413,7 @@ export function analyze(entries: WatchEntry[], source: DataSource, progress: Pro
       startLabel: label(s),
       endLabel: label(e - 1),
       name: `The ${pick.label} Era`,
-      tagline: `${topTopics.slice(0, 2).map((t) => topicDef(t.id).label).join(' + ')} · ${months} month${months === 1 ? '' : 's'}`,
+      tagline: `${lead.slice(0, 2).map((t) => topicDef(t.id).label).join(' + ')} · ${months} month${months === 1 ? '' : 's'}`,
       count: a.count,
       topTopics,
       topChannels,
@@ -441,17 +473,19 @@ export function analyze(entries: WatchEntry[], source: DataSource, progress: Pro
   progress('Listening to your daily rhythm', 0.93);
   const hourByYear = yearAggs.map((a) => [...a.hours]);
   const weekdayHour = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
-  for (let i = 0; i < n; i++) weekdayHour[wdOf[i]][hourOf[i]]++;
+  for (let i = 0; i < n; i++) if (!entries[i].approx) weekdayHour[wdOf[i]][hourOf[i]]++;
   const milestones = milestonesFor(entries, overall, dayOf);
 
   const overallPersona = personaFor(
     overallTopics,
-    (sumRange(overall.hours, 23, 24) + sumRange(overall.hours, 0, 5)) / n,
-    sumRange(overall.hours, 5, 9) / n,
+    (sumRange(overall.hours, 23, 24) + sumRange(overall.hours, 0, 5)) / Math.max(1, overall.timed),
+    sumRange(overall.hours, 5, 9) / Math.max(1, overall.timed),
     (overall.weekday[5] + overall.weekday[6]) / n,
     overall.days.size ? n / overall.days.size : 0,
     overall.days.size,
     argmax(overall.hours),
+    vocab,
+    soundtrack,
   );
 
   const channelTopics: Record<string, TopicId> = {};
@@ -466,13 +500,16 @@ export function analyze(entries: WatchEntry[], source: DataSource, progress: Pro
       years,
       uniqueChannels: channels.length,
       uniqueVideos: overall.videos.size,
-      musicCount: entries.reduce((s, e) => s + (e.music ? 1 : 0), 0),
-      removedCount: entries.reduce((s, e) => s + (e.title ? 0 : 1), 0),
+      musicCount: entries.reduce((s, e) => s + (e.kind === 'music' ? 1 : 0), 0),
+      removedCount: entries.reduce((s, e) => s + (e.source === 'youtube' && !e.title ? 1 : 0), 0),
       activeDays: overall.days.size,
       spanDays: Math.round((last - first) / DAY) + 1,
-      source,
+      totalMs: entries.reduce((s, e) => s + (e.ms ?? 0), 0),
+      sources,
+      sample: opts.sample,
       generatedAt: Date.now(),
     },
+    vocab,
     topicSlots,
     overallTopics,
     overallPersona,
@@ -517,9 +554,9 @@ function videoRef(entries: WatchEntry[], key: string, count: number, yearOf?: In
   for (let i = entries.length - 1; i >= 0; i--) {
     if (yearOf && year !== undefined && yearOf[i] !== year) continue;
     const e = entries[i];
-    if (videoKey(e) === key) return { title: e.title || 'A video that is no longer available', videoId: e.videoId, channel: e.channel, count, t: e.t };
+    if (videoKey(e) === key) return refOf(e, count);
   }
-  return { title: key, videoId: null, channel: null, count };
+  return { title: key, videoId: null, url: null, channel: null, source: entries[0]?.source ?? 'youtube', count };
 }
 
 function firstTitled(entries: WatchEntry[], from: number, yearOf: Int16Array, year: number): number {
@@ -574,8 +611,7 @@ function storyFor(c: ChannelAgg, entries: WatchEntry[], monthOf: Int32Array, fir
 
 function milestonesFor(entries: WatchEntry[], overall: Agg, dayOf: Int32Array): Milestones {
   const firstIdx = entries.findIndex((e) => e.title);
-  const firstEver: VideoRef | null =
-    firstIdx >= 0 ? { title: entries[firstIdx].title, videoId: entries[firstIdx].videoId, channel: entries[firstIdx].channel, count: 1, t: entries[firstIdx].t } : null;
+  const firstEver: VideoRef | null = firstIdx >= 0 ? refOf(entries[firstIdx], 1) : null;
   const mostRewatched = topN(overall.videos, 30)
     .filter(([, c]) => c >= 3)
     .slice(0, 5)
@@ -623,30 +659,40 @@ function personaFor(
   perDay: number,
   activeDays: number,
   peakHour: number,
+  v: Vocab,
+  soundtrack = false,
 ): Persona {
-  const named = topTopics.filter((t) => t.id !== 'other');
+  let named = topTopics.filter((t) => t.id !== 'other');
+  // Background topics (music as a soundtrack, generic scrolling) step aside for real interests.
+  const background = (t: TopicShare) => (soundtrack && t.id === 'music') || t.id === 'social';
+  const foreground = named.filter((t) => !background(t));
+  const asSoundtrack = soundtrack && named.some((t) => t.id === 'music') && foreground.length > 0 && background(named[0]);
+  if (foreground.length && background(named[0])) {
+    const bgShare = named.filter(background).reduce((s, t) => s + t.share, 0);
+    named = foreground.map((t) => ({ ...t, share: t.share / Math.max(0.01, 1 - bgShare) }));
+  }
   const top = named[0] ?? topTopics[0];
   const def = topicDef(top?.id ?? 'other');
   let adj: string;
   let why: string;
   if (nightShare >= 0.28) {
     adj = 'Night-Owl';
-    why = `${pct(nightShare)}% of your watching happened between 11pm and 5am`;
+    why = `${pct(nightShare)}% of your ${v.doing} happened between 11pm and 5am`;
   } else if (morningShare >= 0.22) {
     adj = 'Early-Bird';
-    why = `${pct(morningShare)}% of your watching happened before 9am`;
+    why = `${pct(morningShare)}% of your ${v.doing} happened before 9am`;
   } else if (perDay >= 22) {
     adj = 'Binge-Watching';
-    why = `you averaged ${Math.round(perDay)} videos on the days you watched`;
+    why = `you averaged ${Math.round(perDay)} ${v.items} on the days you showed up`;
   } else if (top && top.share < 0.2 && named.length >= 6) {
     adj = 'Renaissance';
     why = `no single topic took more than ${pct(top.share)}% of your attention`;
   } else if (weekendShare >= 0.42) {
     adj = 'Weekend';
-    why = `${pct(weekendShare)}% of your watching happened on Saturdays and Sundays`;
+    why = `${pct(weekendShare)}% of your ${v.doing} happened on Saturdays and Sundays`;
   } else if (top && top.share >= 0.45) {
     adj = 'Devoted';
-    why = `${lowerLabel(def.label)} took ${pct(top.share)}% of everything you watched`;
+    why = `${lowerLabel(def.label)} took ${pct(top.share)}% of all your ${v.items}`;
   } else if (activeDays < 100 && perDay < 5) {
     adj = 'Casual';
     why = `you only dipped in on ${activeDays} days`;
@@ -654,7 +700,11 @@ function personaFor(
     adj = 'Curious';
     why = `you usually tuned in around ${hourLabel(peakHour)}`;
   }
-  const second = named[1] ? ` with a side of ${lowerLabel(topicDef(named[1].id).label)}` : '';
+  const second = asSoundtrack
+    ? ', with music always playing in the background'
+    : named[1]
+      ? ` with a side of ${lowerLabel(topicDef(named[1].id).label)}`
+      : '';
   return {
     title: `The ${adj} ${def.noun}`,
     emoji: def.emoji,
@@ -672,21 +722,21 @@ const CLOSINGS = [
   'Some of that is still in you somewhere.',
 ];
 
-function letterFor(y: YearSummary): string[] {
+function letterFor(y: YearSummary, v: Vocab): string[] {
   const lines: string[] = [];
   const fmt = (x: number) => x.toLocaleString('en-US');
   lines.push(
-    `You watched ${fmt(y.count)} videos in ${y.year}${y.partial ? ' (at least – this year is only partly in your history)' : ''}, about ${Math.round(y.perActiveDay)} on each day you pressed play.`,
+    `You racked up ${fmt(y.count)} ${v.items} in ${y.year}${y.partial ? ' (at least – this year is only partly in your history)' : ''}, about ${Math.round(y.perActiveDay)} on each day you showed up.`,
   );
   const top = y.topChannels[0];
-  if (top) lines.push(`Your most constant companion was ${top.name}, with ${fmt(top.count)} videos.`);
+  if (top) lines.push(`Your most constant companion was ${top.name}, with ${fmt(top.count)} ${top.count === 1 ? v.item : v.items}.`);
   if (y.signatureWords.length >= 3) lines.push(`Your head was full of ${listJoin(y.signatureWords.slice(0, 3).map((w) => w.toLowerCase()))}.`);
-  if (y.nightShare >= 0.25) lines.push(`A lot of it happened in the dark: ${pct(y.nightShare)}% of your watching came after 11pm.`);
+  if (y.nightShare >= 0.25) lines.push(`A lot of it happened in the dark: ${pct(y.nightShare)}% of your ${v.doing} came after 11pm.`);
   else if (y.morningShare >= 0.2) lines.push(`You were a morning person: ${pct(y.morningShare)}% of it happened before 9am.`);
   else lines.push(`Your prime time was around ${hourLabel(y.peakHour)}.`);
   if (y.newChannels > 0) {
     const notable = y.notableNewChannels.slice(0, 2);
-    lines.push(`You discovered ${fmt(y.newChannels)} new channel${y.newChannels === 1 ? '' : 's'}${notable.length ? `, including ${listJoin(notable)}` : ''}.`);
+    lines.push(`You discovered ${fmt(y.newChannels)} new ${y.newChannels === 1 ? v.creator : v.creators}${notable.length ? `, including ${listJoin(notable)}` : ''}.`);
   }
   if (y.mostRewatched && y.mostRewatched.count >= 3 && y.mostRewatched.title) {
     lines.push(`You played “${y.mostRewatched.title}” ${y.mostRewatched.count} times. It clearly meant something.`);

@@ -26,7 +26,7 @@ export function Loading({ stage, pct }: { stage: string; pct: number }) {
         <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(p * 100)}>
           <div className="progress-bar" style={{ transform: `scaleX(${p})` }} />
         </div>
-        <p className="muted" key={quip}>
+        <p className="muted loading-quip" key={quip}>
           {QUIPS[quip]}
         </p>
         <p className="loading-note">Everything is happening on your device. Nothing is being uploaded.</p>

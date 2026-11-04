@@ -8,7 +8,7 @@ export function River({ report }: { report: Report }) {
   return (
     <section className="section wrap" id="river">
       <SectionHead eyebrow="Month by month" title="The river of your taste">
-        Every band is a topic and its thickness is how much of your watching it took up that month. Hover or tap to
+        Every band is a topic and its thickness is how much of your {report.vocab.doing} it took up that month. Hover or tap to
         look closer. Your eras are marked underneath.
       </SectionHead>
       <Reveal className="card chart-card">
@@ -28,7 +28,7 @@ export function Drift({ report, onPick }: { report: Report; onPick: (y: number) 
   return (
     <section className="section wrap" id="drift">
       <SectionHead eyebrow="Drift" title="How much you changed, year to year">
-        We compared each year’s channels, topics and words with the year before. 0% means the same person; 100% means
+        We compared each year’s {report.vocab.creators}, topics and words with the year before. 0% means the same person; 100% means
         a complete stranger.
       </SectionHead>
       <div className="drift-layout">

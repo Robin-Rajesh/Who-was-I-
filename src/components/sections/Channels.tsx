@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { ChannelStory, Report } from '../../lib/types';
 import { topicDef } from '../../lib/topics';
-import { channelUrl, duration, monthYear, num } from '../../lib/format';
+import { duration, link, monthYear, num } from '../../lib/format';
+import type { Vocab } from '../../lib/sources';
 import { SparkBars } from '../charts/SparkBars';
 import { MaybeLink, Reveal, SectionHead, Segmented, topicColor } from '../ui';
 
@@ -16,9 +17,10 @@ export function Channels({ report }: { report: Report }) {
   const [tab, setTab] = useState<Tab>(available[0]?.value ?? 'abandoned');
   if (!available.length) return null;
   const current = available.find((t) => t.value === tab) ?? available[0];
+  const C = report.vocab.creators.charAt(0).toUpperCase() + report.vocab.creators.slice(1);
   const intro: Record<Tab, string> = {
-    abandoned: 'Channels you were completely into, and then never watched again. Where did they go? Where did you go?',
-    rekindled: 'Channels you left for a year or more, and then came back to.',
+    abandoned: `${C} you were completely into, and then never went back to. Where did they go? Where did you go?`,
+    rekindled: `${C} you left for a year or more, and then came back to.`,
     constants: 'The ones that never left. Through every era, these stayed.',
   };
   return (
@@ -27,7 +29,7 @@ export function Channels({ report }: { report: Report }) {
         {intro[current.value]}
       </SectionHead>
       <Reveal className="tab-row">
-        <Segmented label="Channel stories" value={current.value} onChange={setTab} options={available.map(({ value, label }) => ({ value, label }))} />
+        <Segmented label="Creator stories" value={current.value} onChange={setTab} options={available.map(({ value, label }) => ({ value, label }))} />
       </Reveal>
       <div className="story-grid">
         {current.list.map((s, i) => (
@@ -38,15 +40,15 @@ export function Channels({ report }: { report: Report }) {
               </span>
               <div style={{ minWidth: 0 }}>
                 <h3 className="story-name">
-                  <MaybeLink href={channelUrl(s.url, report.meta.source)}>{s.name}</MaybeLink>
+                  <MaybeLink href={link(s.url, report.meta.sample)}>{s.name}</MaybeLink>
                 </h3>
                 <span className="muted">
-                  {num(s.total)} videos · {monthYear(s.firstSeen)} – {monthYear(s.lastSeen)}
+                  {num(s.total)} {report.vocab.items} · {monthYear(s.firstSeen)} – {monthYear(s.lastSeen)}
                 </span>
               </div>
             </div>
-            <p className="story-text ink-2">{storyLine(current.value, s)}</p>
-            <SparkBars values={s.perYear} labels={report.meta.years} color={topicColor(report, s.topic)} />
+            <p className="story-text ink-2">{storyLine(current.value, s, report.vocab)}</p>
+            <SparkBars values={s.perYear} labels={report.meta.years} color={topicColor(report, s.topic)} unit={report.vocab.items} />
             <div className="spark-axis muted">
               <span>{report.meta.years[0]}</span>
               <span>{report.meta.years[report.meta.years.length - 1]}</span>
@@ -58,14 +60,14 @@ export function Channels({ report }: { report: Report }) {
   );
 }
 
-function storyLine(tab: Tab, s: ChannelStory): string {
+function storyLine(tab: Tab, s: ChannelStory, v: Vocab): string {
   if (tab === 'abandoned') {
     const window = monthYear(s.peakStart) === monthYear(s.peakEnd) ? monthYear(s.peakStart) : `${monthYear(s.peakStart)} – ${monthYear(s.peakEnd)}`;
-    return `Peaked with ${num(s.peakCount)} videos in ${window}. Last seen ${monthYear(s.lastSeen)}${s.lastTitle ? `: “${s.lastTitle}”` : ''}.`;
+    return `Peaked with ${num(s.peakCount)} ${v.items} in ${window}. Last seen ${monthYear(s.lastSeen)}${s.lastTitle ? `: “${s.lastTitle}”` : ''}.`;
   }
   if (tab === 'rekindled') {
     return `You disappeared for ${duration(s.gapDays ?? 0)} (${monthYear(s.gapStart ?? 0)} – ${monthYear(s.gapEnd ?? 0)}), then came back.`;
   }
   const active = s.perYear.filter((v) => v >= 3).length;
-  return `Showed up in ${active} of your ${s.perYear.length} years, ${num(s.total)} videos in all.`;
+  return `Showed up in ${active} of your ${s.perYear.length} years, ${num(s.total)} ${v.items} in all.`;
 }

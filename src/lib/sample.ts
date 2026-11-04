@@ -155,12 +155,88 @@ export function generateSampleHistory(seed = 20151, end = Date.now()): WatchEntr
           videoId: rewatch ? idFor(title) : idFor(`${title}#${Math.floor(rand() * 60)}`),
           channel: removed ? null : ch.name,
           channelUrl: removed ? null : `https://www.youtube.com/channel/UC${hash(ch.name).toString(36)}`,
-          music: !!ch.music && rand() < 0.5,
+          url: null,
+          source: 'youtube',
+          kind: ch.music && rand() < 0.5 ? 'music' : 'video',
         });
       }
     }
     day.setDate(day.getDate() + 1);
   }
+  addSpotify(entries, rand, end);
+  addNetflix(entries, rand, end);
   entries.sort((a, b) => a.t - b.t);
   return entries;
+}
+
+/* ------------------------------------------------------------------ Spotify + Netflix */
+
+interface MediaPhase {
+  from: number;
+  artists: string[];
+  podcasts: string[];
+  shows: string[];
+}
+
+const SONGS = ['Golden Hour', 'Static Hearts', 'Paper Planes', 'Slow Motion', 'Northern Lights', 'Undertow', 'Glass House', 'Late Bloomer', 'Satellites', 'Low Tide', 'Overgrown', 'Small Hours'];
+
+const MEDIA_PHASES: MediaPhase[] = [
+  { from: Date.UTC(2017, 6, 1), artists: ['Nova Lane', 'Juniper Fox', 'Arcadia Blue', 'Sakura Static'], podcasts: [], shows: ['Starfall Academy (Anime)'] },
+  { from: Date.UTC(2019, 0, 1), artists: ['Lo-Fi Lantern', 'Nova Lane', 'Quiet Library', 'Arcadia Blue'], podcasts: ['Curious Minds Podcast'], shows: ['Cosmos Uncharted: A Space Documentary'] },
+  { from: Date.UTC(2020, 2, 1), artists: ['Sundial', 'Velvet Thursday', 'Kitchen Radio Collective', 'Nova Lane'], podcasts: ['The Long Table Podcast'], shows: ['The Great Home Bake Off', 'Street Food Stories'] },
+  { from: Date.UTC(2021, 2, 1), artists: ['Neon Harbor', 'Glasswing', 'Static Bloom'], podcasts: ['Money Minutes'], shows: ['Crypto Kings', 'The Heist Season'] },
+  { from: Date.UTC(2022, 4, 1), artists: ['Wanderline', 'Glasswing', 'Juniper Fox', 'Coastal Radio'], podcasts: ['The Long Table Podcast'], shows: ['Slow Travel Japan', 'Wanderlust Diaries'] },
+  { from: Date.UTC(2023, 5, 1), artists: ['Focus Machine', 'Deep Work Radio', 'Neon Harbor', 'Nova Lane'], podcasts: ['Build in Public', 'The Long Table Podcast'], shows: ['Silicon Dreams', 'The Last Startup'] },
+];
+
+function phaseAt(t: number): MediaPhase | null {
+  let p: MediaPhase | null = null;
+  for (const ph of MEDIA_PHASES) if (ph.from <= t) p = ph;
+  return p;
+}
+
+function addSpotify(out: WatchEntry[], rand: () => number, end: number) {
+  const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)];
+  for (let day = MEDIA_PHASES[0].from; day < end; day += 86_400_000) {
+    const ph = phaseAt(day)!;
+    if (rand() < 0.25) continue;
+    const n = Math.round(3 + rand() * 14);
+    const hour = pick([7, 8, 9, 13, 17, 18, 22]);
+    let t = day + hour * 3_600_000 + Math.floor(rand() * 3_000_000);
+    for (let k = 0; k < n; k++) {
+      const podcast = ph.podcasts.length > 0 && rand() < 0.08;
+      const ms = podcast ? 1_200_000 + Math.floor(rand() * 2_400_000) : 150_000 + Math.floor(rand() * 90_000);
+      t += ms;
+      if (t > end) return;
+      if (podcast) {
+        const show = pick(ph.podcasts);
+        const ep = `Ep. ${1 + Math.floor(rand() * 200)}: ${pick(['On Ambition', 'Starting Over', 'Money and Meaning', 'What We Learned', 'Small Steps'])}`;
+        out.push({ t, title: ep, videoId: `${show}::${ep}`, channel: show, channelUrl: null, url: null, source: 'spotify', kind: 'podcast', ms });
+      } else {
+        const artist = pick(ph.artists);
+        const song = SONGS[(hash(artist) + Math.floor(rand() * 5)) % SONGS.length];
+        out.push({ t, title: song, videoId: `${artist}::${song}`, channel: artist, channelUrl: null, url: null, source: 'spotify', kind: 'music', ms });
+      }
+    }
+  }
+}
+
+function addNetflix(out: WatchEntry[], rand: () => number, end: number) {
+  const episodes = new Map<string, number>();
+  for (let day = MEDIA_PHASES[0].from; day < end; day += 86_400_000) {
+    const ph = phaseAt(day)!;
+    if (rand() < 0.72) continue;
+    const show = ph.shows[Math.floor(rand() * ph.shows.length)];
+    const n = 1 + Math.floor(rand() * (rand() < 0.15 ? 6 : 2)); // occasional binge
+    let t = day + (20 + Math.floor(rand() * 3)) * 3_600_000;
+    for (let k = 0; k < n; k++) {
+      const ep = (episodes.get(show) ?? 0) + 1;
+      episodes.set(show, ep);
+      const title = `${show}: Season ${1 + Math.floor((ep - 1) / 10)}: Episode ${((ep - 1) % 10) + 1}`;
+      const ms = 1_500_000 + Math.floor(rand() * 1_800_000);
+      if (t > end) return;
+      out.push({ t, title, videoId: title, channel: show, channelUrl: null, url: null, source: 'netflix', kind: 'show', ms });
+      t += ms + 60_000;
+    }
+  }
 }

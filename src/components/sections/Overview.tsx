@@ -1,10 +1,13 @@
 import type { Report } from '../../lib/types';
 import { topicDef } from '../../lib/topics';
-import { compact, date, duration, num, pct, videoUrl } from '../../lib/format';
+import { compact, date, duration, link, listenTime, num, pct } from '../../lib/format';
+import { sourceDef } from '../../lib/sources';
 import { MaybeLink, Reveal, topicColor, useTooltip } from '../ui';
 
 export function Overview({ report }: { report: Report }) {
-  const { meta, overallPersona, overallTopics, milestones } = report;
+  const { meta, overallPersona, overallTopics, milestones, vocab } = report;
+  const [before, after] = vocab.headline.split('{n}');
+  const time = meta.totalMs > 3_600_000 ? listenTime(meta.totalMs) : null;
   const tt = useTooltip();
   const years = meta.years.length;
   const spanYears = meta.spanDays / 365.25;
@@ -25,11 +28,15 @@ export function Overview({ report }: { report: Report }) {
           {date(meta.first, { month: 'long', year: 'numeric' })} – {date(meta.last, { month: 'long', year: 'numeric' })}
         </span>
         <h1>
-          You pressed play <span className="gradient-text">{num(meta.total)}</span> times.
+          {before}
+          <span className="gradient-text">{num(meta.total)}</span>
+          {after}
         </h1>
         <p className="lede">
           That’s {spanYears >= 1.5 ? `${spanYears.toFixed(1)} years` : duration(meta.spanDays)} of you, spread across{' '}
-          {num(meta.uniqueChannels)} channels. Here’s who all those versions of you were.
+          {num(meta.uniqueChannels)} {vocab.creators}
+          {meta.sources.length > 1 ? ` on ${listSources(meta.sources.map((s) => sourceDef(s.id).label))}` : ''}. Here’s who all those versions of you
+          were.
         </p>
       </Reveal>
 
@@ -45,12 +52,16 @@ export function Overview({ report }: { report: Report }) {
 
         <div className="stat-grid">
           {[
-            { v: compact(meta.total), l: 'videos watched' },
+            { v: compact(meta.total), l: vocab.items },
             { v: String(years), l: years === 1 ? 'year of history' : 'years of history' },
-            { v: compact(meta.uniqueChannels), l: 'channels' },
-            { v: compact(meta.activeDays), l: 'days you pressed play' },
-            { v: (meta.total / Math.max(1, meta.activeDays)).toFixed(1), l: 'videos per active day' },
-            { v: meta.musicCount ? pct(meta.musicCount / meta.total) : `${report.eras.length}`, l: meta.musicCount ? 'from YouTube Music' : 'distinct eras' },
+            { v: compact(meta.uniqueChannels), l: vocab.creators },
+            { v: compact(meta.activeDays), l: 'days you showed up' },
+            { v: (meta.total / Math.max(1, meta.activeDays)).toFixed(1), l: `${vocab.items} per active day` },
+            time
+              ? { v: time.value, l: `${time.unit} of listening & watching` }
+              : meta.sources.length > 1
+                ? { v: String(meta.sources.length), l: 'platforms' }
+                : { v: `${report.eras.length}`, l: report.eras.length === 1 ? 'era' : 'distinct eras' },
           ].map((s, i) => (
             <Reveal key={s.l} className="stat card" delay={100 + i * 40}>
               <span className="stat-value">{s.v}</span>
@@ -62,7 +73,7 @@ export function Overview({ report }: { report: Report }) {
 
       <Reveal className="topic-mix card" delay={120}>
         <div className="topic-mix-head">
-          <h3>What you watched, all time</h3>
+          <h3>What you were into, all time</h3>
           <span className="muted">Share of every video</span>
         </div>
         <div className="seg-bar" role="img" aria-label={mergedSegments.map((s) => `${topicDef(s.id).label} ${pct(s.count / meta.total)}`).join(', ')}>
@@ -95,9 +106,9 @@ export function Overview({ report }: { report: Report }) {
             ⏮
           </div>
           <div>
-            <span className="eyebrow">The very first video in your history · {date(milestones.firstEver.t ?? meta.first, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
+            <span className="eyebrow">The very first {firstLabel(milestones.firstEver.source)} in your history · {date(milestones.firstEver.t ?? meta.first, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
             <p className="first-ever-title">
-              <MaybeLink href={videoUrl(milestones.firstEver.videoId, meta.source)}>“{milestones.firstEver.title}”</MaybeLink>
+              <MaybeLink href={link(milestones.firstEver.url, meta.sample)}>“{milestones.firstEver.title}”</MaybeLink>
             </p>
             {milestones.firstEver.channel && <p className="muted">from {milestones.firstEver.channel}</p>}
           </div>
@@ -105,4 +116,12 @@ export function Overview({ report }: { report: Report }) {
       )}
     </section>
   );
+}
+
+function listSources(names: string[]): string {
+  return names.length <= 1 ? names[0] ?? '' : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
+function firstLabel(source: Parameters<typeof sourceDef>[0]): string {
+  return { youtube: 'video', spotify: 'song', netflix: 'show', instagram: 'interaction', tiktok: 'TikTok' }[source];
 }

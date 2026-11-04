@@ -4,7 +4,7 @@ import { generateSampleHistory } from './sample';
 
 describe('analyze(sample)', () => {
   const entries = generateSampleHistory(20151, new Date(2025, 9, 20).getTime());
-  const report = analyze(entries, 'sample');
+  const report = analyze(entries, { sample: true });
 
   it('covers every year', () => {
     expect(report.meta.years[0]).toBe(2015);
@@ -29,6 +29,17 @@ describe('analyze(sample)', () => {
     expect(report.channelTopics['Kitchen Alchemy']).toBe('cooking');
     expect(report.channelTopics['Coin Theory']).toBe('finance');
     expect(report.channelTopics['Neural Notes']).toBe('code');
+    // Spotify artists are music, Netflix shows are film unless named otherwise, podcasts are podcasts.
+    expect(report.channelTopics['Glasswing']).toBe('music');
+    expect(report.channelTopics['Silicon Dreams']).toBe('film');
+    expect(report.channelTopics['Starfall Academy (Anime)']).toBe('anime');
+    expect(report.channelTopics['Money Minutes']).toBe('finance');
+  });
+
+  it('spans every platform in the sample', () => {
+    expect(report.meta.sources.map((s) => s.id).sort()).toEqual(['netflix', 'spotify', 'youtube']);
+    expect(report.vocab.items).toBe('plays');
+    expect(report.meta.totalMs).toBeGreaterThan(0);
   });
 
   it('prints a debug overview', () => {
@@ -40,6 +51,6 @@ describe('analyze(sample)', () => {
     console.log('constants', report.constants.map((s) => s.name));
     console.log('overall', report.overallPersona);
     console.log(report.milestones);
-    console.log(Object.entries(report.channelTopics));
+    
   });
 });

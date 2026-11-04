@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import type { Loaded, Theme } from '../App';
+import { useEffect, useRef, useState } from 'react';
+import type { Filter, Loaded, Theme } from '../App';
+import { sourceDef, type SourceId } from '../lib/sources';
 import { topicDef } from '../lib/topics';
 import { compact, num } from '../lib/format';
 import { renderShareCard, shareOrDownload } from '../lib/shareCard';
@@ -35,11 +36,19 @@ interface Props {
   setTheme: (t: Theme) => void;
   onReset: () => void;
   onForget: () => void;
+  onAddFiles: (files: File[]) => void;
+  onFilter: (f: Filter) => void;
+  onRemoveSource: (id: SourceId) => void;
   savedOnDevice: boolean;
+  busy: string | null;
 }
 
-export function ReportView({ data, theme, setTheme, onReset, onForget, savedOnDevice }: Props) {
+export function ReportView({ data, theme, setTheme, onReset, onForget, onAddFiles, onFilter, onRemoveSource, savedOnDevice, busy }: Props) {
   const { report, entries } = data;
+  const addRef = useRef<HTMLInputElement>(null);
+  const allSources = [...new Set(data.all.map((e) => e.source))].map((id) => ({ id, count: data.all.reduce((n, e) => n + (e.source === id ? 1 : 0), 0) }))
+    .sort((a, b) => b.count - a.count);
+  const v = report.vocab;
   const [active, setActive] = useState('overview');
   const [year, setYear] = useState(() => {
     const full = report.years.filter((y) => !y.partial && y.count > 0);
@@ -59,7 +68,7 @@ export function ReportView({ data, theme, setTheme, onReset, onForget, savedOnDe
     );
     els.forEach((el) => io.observe(el));
     return () => io.disconnect();
-  }, []);
+  }, [report]);
 
   useEffect(() => {
     document.querySelector(`.nav-link[data-id="${active}"]`)?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
@@ -80,14 +89,14 @@ export function ReportView({ data, theme, setTheme, onReset, onForget, savedOnDe
         .map((name) => ({ name, count: report.years.reduce((s, y) => s + (y.topChannels.find((c) => c.name === name)?.count ?? 0), 0) }))
         .sort((a, b) => b.count - a.count);
       const blob = await renderShareCard({
-        kicker: 'my life on YouTube',
+        kicker: meta.sources.length === 1 ? `my life on ${sourceDef(meta.sources[0].id).label}` : 'my life, played back',
         title: first === last ? String(first) : `${String(first).slice(2)}–${String(last).slice(2)}`,
         emoji: overallPersona.emoji,
         persona: overallPersona.title,
         blurb: eras.length > 1 ? `${eras.length} eras: ${eras.map((e) => e.name.replace(/^The /, '').replace(/ Era$/, '')).join(' → ')}` : overallPersona.blurb,
         stats: [
-          { value: compact(meta.total), label: 'videos' },
-          { value: compact(meta.uniqueChannels), label: 'channels' },
+          { value: compact(meta.total), label: v.items },
+          { value: compact(meta.uniqueChannels), label: v.creators },
           { value: String(eras.length), label: eras.length === 1 ? 'era' : 'eras' },
         ],
         channels: topChannels,
@@ -100,7 +109,7 @@ export function ReportView({ data, theme, setTheme, onReset, onForget, savedOnDe
     }
   };
 
-  const isSample = report.meta.source === 'sample';
+  const isSample = data.sample;
 
   return (
     <div className="report">
@@ -130,7 +139,7 @@ export function ReportView({ data, theme, setTheme, onReset, onForget, savedOnDe
         <div className="sample-banner">
           <div className="wrap">
             <span>
-              <Icon name="sparkle" size={16} /> You’re looking at a <b>made-up sample life</b>. Every channel here is fictional.
+              <Icon name="sparkle" size={16} /> You’re looking at a <b>made-up sample life</b>. Every channel, artist and show here is fictional.
             </span>
             <button className="btn btn-primary btn-sm" onClick={onReset}>
               Use my own history <Icon name="arrow-right" size={16} />
@@ -139,7 +148,52 @@ export function ReportView({ data, theme, setTheme, onReset, onForget, savedOnDe
         </div>
       )}
 
-      <main>
+      <div className="sources-bar">
+        <div className="wrap sources-inner">
+          <div className="source-chips" role="group" aria-label="Show data from">
+            {allSources.length > 1 && (
+              <button className={`source-chip ${data.filter === 'all' ? 'on' : ''}`} aria-pressed={data.filter === 'all'} onClick={() => onFilter('all')}>
+                ✨ Everything <span className="muted tabular">{compact(data.all.length)}</span>
+              </button>
+            )}
+            {allSources.map((s) => (
+              <span key={s.id} className={`source-chip-wrap ${data.filter === s.id || allSources.length === 1 ? 'on' : ''}`}>
+                <button
+                  className="source-chip"
+                  aria-pressed={data.filter === s.id || allSources.length === 1}
+                  onClick={() => onFilter(allSources.length === 1 ? 'all' : s.id)}
+                >
+                  <span className="dot" style={{ background: sourceDef(s.id).color }} aria-hidden />
+                  {sourceDef(s.id).label} <span className="muted tabular">{compact(s.count)}</span>
+                </button>
+                {!isSample && allSources.length > 1 && (
+                  <button className="source-x" aria-label={`Remove ${sourceDef(s.id).label}`} title={`Remove ${sourceDef(s.id).label}`} onClick={() => onRemoveSource(s.id)}>
+                    <Icon name="x" size={14} />
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
+          <button className="btn btn-sm add-source" onClick={() => addRef.current?.click()}>
+            <Icon name="upload" size={16} /> {isSample ? 'Use my own data' : 'Add a platform'}
+          </button>
+          <input
+            ref={addRef}
+            type="file"
+            accept=".json,.html,.htm,.zip,.csv,application/json,text/html,text/csv,application/zip"
+            multiple
+            hidden
+            onChange={(e) => {
+              const files = [...(e.target.files ?? [])];
+              e.target.value = '';
+              if (files.length) onAddFiles(files);
+            }}
+          />
+        </div>
+        {busy && <div className="busy-bar" role="status" aria-label={busy} />}
+      </div>
+
+      <main className={busy ? 'is-busy' : ''} key={`${data.filter}-${report.meta.generatedAt}`}>
         <Overview report={report} />
         <Eras report={report} />
         <River report={report} />
@@ -190,7 +244,7 @@ export function ReportView({ data, theme, setTheme, onReset, onForget, savedOnDe
           <Logo size={20} /> Who Was I?
         </span>
         <span className="muted">
-          {data.fileName ? `From ${data.fileName} · ` : ''}Analysed on your device. Topics are best guesses from titles.
+          Analysed on your device. Topics are best guesses from names and titles.
         </span>
       </footer>
     </div>

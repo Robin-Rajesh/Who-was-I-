@@ -81,7 +81,16 @@ function toEntry(opts: {
   if (!title || looksLikeUrl(title)) title = '';
   let channel = cleanChannel(opts.channel);
   if (channel && music) channel = channel.replace(/\s-\sTopic$/, '');
-  return { t: opts.t, title, videoId, channel, channelUrl: opts.channelUrl ?? null, music };
+  return {
+    t: opts.t,
+    title,
+    videoId,
+    channel,
+    channelUrl: opts.channelUrl ?? null,
+    url: videoId ? `https://www.youtube.com/watch?v=${videoId}` : null,
+    source: 'youtube',
+    kind: music ? 'music' : 'video',
+  };
 }
 
 export function parseJsonHistory(text: string): WatchEntry[] {
@@ -92,6 +101,16 @@ export function parseJsonHistory(text: string): WatchEntry[] {
     throw new Error('That JSON file could not be read. It may be incomplete — try extracting it from the Takeout zip again.');
   }
   if (!Array.isArray(data)) throw new Error('This JSON file is not a YouTube watch history (expected a list of entries).');
+  return parseYouTubeItems(data);
+}
+
+/** True when a parsed JSON array looks like Takeout's watch history. */
+export function looksLikeYouTube(items: unknown[]): boolean {
+  const first = items.find((x) => x && typeof x === 'object') as RawJsonItem | undefined;
+  return !!first && typeof first.time === 'string' && ('title' in first || 'header' in first);
+}
+
+export function parseYouTubeItems(data: unknown[]): WatchEntry[] {
   const out: WatchEntry[] = [];
   for (const item of data as RawJsonItem[]) {
     if (!item || typeof item !== 'object' || !item.time) continue;
@@ -197,15 +216,21 @@ export function parseHtmlHistory(html: string): WatchEntry[] {
   return finalize(out);
 }
 
-/** Sort ascending by time and drop exact duplicates (same video, same second). */
-function finalize(list: WatchEntry[]): WatchEntry[] {
+/** Sort ascending by time and drop exact duplicates (same item, same moment, same platform). */
+export function finalize(list: WatchEntry[]): WatchEntry[] {
   list.sort((a, b) => a.t - b.t);
   const out: WatchEntry[] = [];
-  let prev: WatchEntry | null = null;
+  const seen = new Set<string>();
+  let lastT = Number.NaN;
   for (const e of list) {
-    if (prev && prev.t === e.t && prev.videoId === e.videoId && prev.title === e.title) continue;
+    if (e.t !== lastT) {
+      seen.clear();
+      lastT = e.t;
+    }
+    const key = `${e.source}|${e.videoId}|${e.title}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
     out.push(e);
-    prev = e;
   }
   return out;
 }

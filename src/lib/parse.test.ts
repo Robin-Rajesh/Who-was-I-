@@ -58,7 +58,7 @@ describe('parseJsonHistory', () => {
     expect(gone.channel).toBeNull();
   });
   it('handles YouTube Music and " - Topic" channels', () => {
-    const m = entries.find((e) => e.music)!;
+    const m = entries.find((e) => e.kind === 'music')!;
     expect(m.channel).toBe('Nova Lane');
   });
   it('strips localised prefixes', () => {

@@ -2,16 +2,33 @@
 
 > It wasn’t just a phase. It was all of them.
 
-**Who Was I?** turns your YouTube watch history into a portrait of every version of you: the eras you
-went through, the obsessions you abandoned, the 2am rabbit holes, and how much you changed from one year to the next.
+**Who Was I?** turns your YouTube, Spotify, Netflix, Instagram and TikTok history into a portrait of every
+version of you: the eras you went through, the obsessions you abandoned, the 2am rabbit holes, and how much you changed
+from one year to the next.
 
-It is **100% private**. The app is a static web page. Your history file is read and analysed inside your own
-browser (in a Web Worker) and is never uploaded anywhere. There is no server, no account and no analytics.
+It is **100% private**. The app is a static web page. Your export files are read and analysed inside your own
+browser (in a Web Worker) and are never uploaded anywhere. There is no server, no account and no analytics.
+
+## Supported platforms
+
+| Platform | What to export | Files read | Notes |
+|---|---|---|---|
+| **YouTube** | [Google Takeout](https://takeout.google.com/) → YouTube and YouTube Music → history (JSON recommended) | `watch-history.json` / `.html` | YouTube Music plays count as music |
+| **Spotify** | [Privacy settings](https://www.spotify.com/account/privacy/) → *Extended streaming history* (lifetime) or *Account data* (1 year) | `Streaming_History_*.json`, `StreamingHistory*.json`, `endsong_*.json` | Plays under 30 s are skips and are ignored. Shows hours listened. |
+| **Netflix** | [Get my info](https://www.netflix.com/account/getmyinfo) (full) or *Viewing activity → Download all* (quick) | `ViewingActivity.csv`, `NetflixViewingHistory.csv` | Asks which profile is you; trailers and <2 min plays are ignored. The quick CSV has no times of day. |
+| **Instagram** | Accounts Center → Download your information → **JSON**, all time | likes, saves, comments, follows, recently viewed | Fixes Meta’s garbled emoji/accents encoding. Views only cover recent days. |
+| **TikTok** | Settings → Account → Download your data → **JSON** | `user_data.json` (old and new layouts) | Links and times only, so TikTok adds rhythm and volume rather than topics |
+
+Drop any mix of files or whole export zips at once, or add platforms later with **Add a platform**. The report can
+show everything together or be filtered to one platform, and wording adapts ("videos", "plays", "shows", "accounts").
+When Spotify is combined with other platforms, music is treated as your *soundtrack*, so personas and eras describe
+what else you were into instead of reading "music" for every year.
 
 ## Features
 
 | | |
 |---|---|
+| 🔀 **Multi-platform** | Combine YouTube, Spotify, Netflix, Instagram and TikTok in one report, filter to any one, add or remove platforms anytime. |
 | 🗺️ **Eras** | Finds the points where your taste genuinely shifted (optimal segmentation of monthly taste vectors) and names each chapter, e.g. *The Minecraft Era*, *The Sourdough Era*. |
 | 🌊 **Taste river** | Month-by-month stacked chart of your topics, with your eras marked underneath. Share/volume modes, hover details, table view. |
 | 💌 **Letters from past you** | Every year gets a persona (*The Night-Owl Gamer*), signature words, top channels and a short letter. |
@@ -27,14 +44,11 @@ browser (in a Web Worker) and is never uploaded anywhere. There is no server, no
 
 Light and dark themes, fully responsive, keyboard accessible, and reduced-motion aware. Every chart has a data-table view.
 
-## Getting your watch history
+## Why exports instead of logging in?
 
-1. Go to [takeout.google.com](https://takeout.google.com/) and click **Deselect all**.
-2. Tick **YouTube and YouTube Music**, click **All YouTube data included**, and keep only **history**.
-3. Click **Multiple formats** and set **History** to **JSON** (HTML also works, but JSON is faster and more reliable).
-4. Create the export, download it, and drop the `.zip` (or `watch-history.json` / `watch-history.html` inside it) into the app.
-
-YouTube’s API no longer exposes watch history, so Takeout is the only way to get it. It also means the app never asks for your Google password.
+Platform APIs don’t give apps your full history: YouTube’s API no longer exposes watch history at all, and Spotify’s
+only returns your last 50 tracks. The official data exports are the only way to get everything, and they mean the app
+never asks for a password. The landing page has step-by-step export instructions for each platform.
 
 ## Running locally
 
@@ -49,7 +63,7 @@ npm run dev
 Other scripts:
 
 ```bash
-npm test          # unit tests (parsers, classifier, analysis engine)
+npm test          # unit tests (all importers, classifier, analysis engine)
 npm run build     # type-check + production build into dist/
 npm run preview   # serve the production build
 ```
@@ -65,10 +79,11 @@ A GitHub Actions workflow (`.github/workflows/deploy.yml`) tests, builds and dep
 ## How it works
 
 ```
-File (.json | .html | .zip)
+Files (.json | .html | .csv | .zip, any mix)
    │  Web Worker
-   ├─ parse.ts      Takeout JSON / HTML (regex, no DOM) / streaming unzip (fflate) → WatchEntry[]
-   ├─ topics.ts     channel-level keyword classifier → 22 topics
+   ├─ importers.ts  detects each file by content: YouTube, Spotify, Netflix, Instagram, TikTok
+   ├─ parse.ts      Takeout JSON / HTML (regex, no DOM); zips are stream-unzipped with fflate
+   ├─ topics.ts     creator-level keyword classifier → 23 topics (kind-aware fallbacks)
    ├─ analyze.ts    years, personas, letters, drift, channel stories, rhythm, milestones
    └─ segment.ts    eras: optimal K-segmentation of monthly taste vectors (DP over prefix sums)
    ▼
@@ -91,7 +106,7 @@ React UI (charts are hand-built SVG with d3-shape; share cards are drawn on <can
 
 - No network requests are made with your data. Fonts are bundled, and there are no trackers or third-party scripts.
 - “Remember on this device” stores parsed entries in this browser’s IndexedDB only. “Forget my data” deletes them.
-- `.gitignore` excludes `watch-history.*` and `takeout-*.zip`, so personal exports aren’t committed by accident.
+- `.gitignore` excludes common export file names, so personal exports aren’t committed by accident.
 
 ## Tech
 
@@ -99,4 +114,4 @@ React 18 · TypeScript · Vite · d3-shape · fflate · Vitest · Fraunces & Int
 
 ---
 
-Not affiliated with YouTube or Google.
+Not affiliated with YouTube, Google, Spotify, Netflix, Meta or TikTok.

@@ -1,5 +1,5 @@
 import type { Report } from '../../lib/types';
-import { num, videoUrl } from '../../lib/format';
+import { link, num } from '../../lib/format';
 import { MaybeLink, Reveal, SectionHead, TopicChip, topicColor } from '../ui';
 
 export function Eras({ report }: { report: Report }) {
@@ -43,7 +43,7 @@ export function Eras({ report }: { report: Report }) {
                 <span aria-hidden>{e.emoji}</span> {e.name}
               </h3>
               <p className="ink-2">
-                {e.tagline} · {num(e.count)} videos
+                {e.tagline} · {num(e.count)} {report.vocab.items}
               </p>
               <div className="era-chips">
                 {e.topTopics.map((t) => (
@@ -78,7 +78,7 @@ export function Eras({ report }: { report: Report }) {
                   {e.anthem && (
                     <p className="anthem">
                       <span className="mini-head">Era anthem</span>
-                      <MaybeLink href={videoUrl(e.anthem.videoId, meta.source)}>“{e.anthem.title}”</MaybeLink>
+                      <MaybeLink href={link(e.anthem.url, meta.sample)}>“{e.anthem.title}”</MaybeLink>
                       <span className="muted"> · played {e.anthem.count}×</span>
                     </p>
                   )}

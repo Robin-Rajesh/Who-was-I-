@@ -30,6 +30,7 @@ export type TopicId =
   | 'wellness'
   | 'kids'
   | 'podcasts'
+  | 'social'
   | 'other';
 
 export interface TopicDef {
@@ -160,9 +161,15 @@ export const TOPICS: TopicDef[] = [
   },
 ];
 
+/** Fallback for Instagram/TikTok activity we can't place more precisely. Not keyword-matched. */
+const SOCIAL_TOPIC: TopicDef = { id: 'social', label: 'Social & Short-form', emoji: '📲', noun: 'Scroller', keywords: [] };
+
 export const OTHER_TOPIC: TopicDef = { id: 'other', label: 'Everything else', emoji: '✨', noun: 'Explorer', keywords: [] };
 
-const TOPIC_BY_ID = new Map<TopicId, TopicDef>([...TOPICS, OTHER_TOPIC].map((t) => [t.id, t]));
+const TOPIC_BY_ID = new Map<TopicId, TopicDef>([...TOPICS, SOCIAL_TOPIC, OTHER_TOPIC].map((t) => [t.id, t]));
+
+/** Every topic id, in a stable order (used for vectors and colour slots). */
+export const ALL_TOPIC_IDS: TopicId[] = [...TOPICS.map((t) => t.id), SOCIAL_TOPIC.id, OTHER_TOPIC.id];
 
 /** "Code & AI" -> "code & AI" for use mid-sentence. */
 export function lowerLabel(label: string): string {
@@ -188,15 +195,37 @@ function countMatches(re: RegExp, text: string): number {
   return n;
 }
 
+export interface KindHints {
+  /** Fraction of the creator's entries that are music plays (YouTube Music, Spotify tracks). */
+  music?: number;
+  podcast?: number;
+  /** Netflix titles. */
+  show?: number;
+  /** Instagram / TikTok interactions. */
+  social?: number;
+}
+
+// Topics that make sense for a Netflix show when its name gives it away.
+const SHOW_TOPICS = new Set<TopicId>(['anime', 'kids', 'science', 'learning', 'comedy', 'cooking', 'travel', 'sports', 'news', 'cars', 'animals', 'style', 'diy', 'gaming']);
+
 /**
- * Score topics for a channel.
- * @param channelName the channel's display name (weighted ×3)
- * @param titles a sample of titles watched from it
- * @param musicShare fraction of its watches that came from YouTube Music
+ * Score topics for a creator (channel, artist, show or account).
+ * @param channelName the display name (weighted ×3)
+ * @param titles a sample of titles watched/played from it
+ * @param hints what kind of entries this creator produced, which sets the fallback
  */
-export function classifyChannel(channelName: string, titles: string[], musicShare = 0): TopicId {
+export function classifyChannel(channelName: string, titles: string[], hints: KindHints | number = {}): TopicId {
+  const h: KindHints = typeof hints === 'number' ? { music: hints } : hints;
   const name = channelName.toLowerCase();
-  if (musicShare >= 0.5 || /\s-\stopic$/.test(name) || /vevo$/.test(name)) return 'music';
+  if ((h.music ?? 0) >= 0.5 || /\s-\stopic$/.test(name) || /vevo$/.test(name)) return 'music';
+  const guess = keywordTopic(name, titles);
+  if ((h.show ?? 0) >= 0.5) return SHOW_TOPICS.has(guess) ? guess : 'film';
+  if ((h.podcast ?? 0) >= 0.5) return guess === 'other' || guess === 'music' ? 'podcasts' : guess;
+  if ((h.social ?? 0) >= 0.5) return guess === 'other' ? 'social' : guess;
+  return guess;
+}
+
+function keywordTopic(name: string, titles: string[]): TopicId {
   const body = titles.join(' \n ').toLowerCase();
   let best: TopicId = 'other';
   let bestScore = 0;

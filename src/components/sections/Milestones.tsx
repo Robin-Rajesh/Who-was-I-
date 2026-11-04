@@ -1,5 +1,5 @@
 import type { Report } from '../../lib/types';
-import { date, duration, num, videoUrl } from '../../lib/format';
+import { date, duration, link, num } from '../../lib/format';
 import { MaybeLink, Reveal, SectionHead } from '../ui';
 
 export function Milestones({ report }: { report: Report }) {
@@ -12,7 +12,7 @@ export function Milestones({ report }: { report: Report }) {
           <Reveal className="card milestone">
             <span className="milestone-emoji" aria-hidden>🔥</span>
             <span className="eyebrow">Busiest day ever</span>
-            <strong className="callout-big">{num(m.busiestDay.count)} videos</strong>
+            <strong className="callout-big">{num(m.busiestDay.count)} {report.vocab.items}</strong>
             <p className="ink-2">{date(m.busiestDay.date, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
             {m.busiestDay.titles.length > 0 && (
               <ul className="mini-titles">
@@ -43,12 +43,21 @@ export function Milestones({ report }: { report: Report }) {
             </p>
           </Reveal>
         )}
-        <Reveal className="card milestone" delay={150}>
-          <span className="milestone-emoji" aria-hidden>🫥</span>
-          <span className="eyebrow">Gone but not forgotten</span>
-          <strong className="callout-big">{num(meta.removedCount)}</strong>
-          <p className="ink-2">videos you watched that have since been deleted or made private.</p>
-        </Reveal>
+        {meta.removedCount > 0 ? (
+          <Reveal className="card milestone" delay={150}>
+            <span className="milestone-emoji" aria-hidden>🫥</span>
+            <span className="eyebrow">Gone but not forgotten</span>
+            <strong className="callout-big">{num(meta.removedCount)}</strong>
+            <p className="ink-2">YouTube videos you watched that have since been deleted or made private.</p>
+          </Reveal>
+        ) : (
+          <Reveal className="card milestone" delay={150}>
+            <span className="milestone-emoji" aria-hidden>🧭</span>
+            <span className="eyebrow">Days you showed up</span>
+            <strong className="callout-big">{num(meta.activeDays)}</strong>
+            <p className="ink-2">out of {num(meta.spanDays)} days in your history ({Math.round((meta.activeDays / Math.max(1, meta.spanDays)) * 100)}%).</p>
+          </Reveal>
+        )}
       </div>
 
       {m.mostRewatched.length > 0 && (
@@ -59,7 +68,7 @@ export function Milestones({ report }: { report: Report }) {
               <li key={i}>
                 <span className="rewatch-count tabular">{num(v.count)}×</span>
                 <div className="video-text">
-                  <MaybeLink className="video-title" href={videoUrl(v.videoId, meta.source)}>
+                  <MaybeLink className="video-title" href={link(v.url, meta.sample)}>
                     {v.title}
                   </MaybeLink>
                   {v.channel && <span className="muted video-channel">{v.channel}</span>}

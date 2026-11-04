@@ -1,6 +1,13 @@
 import type { TopicId } from './topics';
+import type { EntryKind, SourceId, Vocab } from './sources';
 
-/** One normalised "watched" event from the Takeout export. */
+/**
+ * One normalised activity event: a watched video, a played track, a Netflix
+ * episode, an Instagram like… The field names come from the YouTube origins
+ * of the app, but they are generic:
+ *  - `videoId`  stable id of the item (video id, track URI…) for "on repeat"
+ *  - `channel`  the creator: channel / artist / show / account
+ */
 export interface WatchEntry {
   /** Epoch milliseconds. */
   t: number;
@@ -8,11 +15,20 @@ export interface WatchEntry {
   videoId: string | null;
   channel: string | null;
   channelUrl: string | null;
-  /** Came from YouTube Music. */
-  music: boolean;
+  /** Link to the item itself, when the platform provides one. */
+  url: string | null;
+  source: SourceId;
+  kind: EntryKind;
+  /** Milliseconds listened/watched, when known (Spotify, Netflix). */
+  ms?: number;
+  /** The date is known but not the time of day (e.g. Netflix quick export). */
+  approx?: boolean;
 }
 
-export type DataSource = 'json' | 'html' | 'sample';
+export interface SourceCount {
+  id: SourceId;
+  count: number;
+}
 
 export interface ChannelRef {
   name: string;
@@ -29,7 +45,9 @@ export interface TopicShare {
 export interface VideoRef {
   title: string;
   videoId: string | null;
+  url: string | null;
   channel: string | null;
+  source: SourceId;
   count: number;
   t?: number;
 }
@@ -137,9 +155,14 @@ export interface Report {
     removedCount: number;
     activeDays: number;
     spanDays: number;
-    source: DataSource;
+    /** Total listening/watching time where the platform records it. */
+    totalMs: number;
+    /** Sources present in this report, largest first. */
+    sources: SourceCount[];
+    sample: boolean;
     generatedAt: number;
   };
+  vocab: Vocab;
   /** Top 7 topics overall get categorical colour slots 1–7; everything else is neutral. */
   topicSlots: Partial<Record<TopicId, number>>;
   overallTopics: TopicShare[];
@@ -163,12 +186,20 @@ export interface Report {
   channelTopics: Record<string, TopicId>;
 }
 
+export interface LoadOptions {
+  /** Netflix profile to keep when an account has several. */
+  netflixProfile?: string;
+}
+
 export type WorkerRequest =
-  | { type: 'files'; files: File[] }
+  /** Parse files and merge them into `base` (already-loaded entries). */
+  | { type: 'files'; files: File[]; base: WatchEntry[]; sample: boolean; options: LoadOptions }
   | { type: 'sample' }
-  | { type: 'entries'; entries: WatchEntry[]; source: DataSource };
+  /** Analyse `entries`; `all` is what gets handed back (filtering keeps the full set). */
+  | { type: 'entries'; entries: WatchEntry[]; sample: boolean };
 
 export type WorkerResponse =
   | { type: 'progress'; stage: string; pct: number }
-  | { type: 'done'; entries: WatchEntry[]; report: Report; source: DataSource; fileName: string | null }
+  | { type: 'done'; entries: WatchEntry[] | null; report: Report; sample: boolean; added: SourceCount[] }
+  | { type: 'choose-profile'; profiles: { name: string; count: number }[] }
   | { type: 'error'; message: string };

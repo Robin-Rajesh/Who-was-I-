@@ -1,6 +1,7 @@
 import { useDeferredValue, useMemo, useState } from 'react';
 import type { Report, WatchEntry } from '../../lib/types';
-import { date, monthLabel, monthYear, num, time, videoUrl } from '../../lib/format';
+import { date, link, monthLabel, monthYear, num, time, untitled } from '../../lib/format';
+import { sourceDef } from '../../lib/sources';
 import { Icon, MaybeLink, Reveal, SectionHead, useTooltip } from '../ui';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -13,8 +14,8 @@ export function TimeMachine({ report, entries }: { report: Report; entries: Watc
   return (
     <section className="section wrap" id="time-machine">
       <SectionHead eyebrow="Time machine" title="Go back to any day">
-        Memories from this exact date in past years, any day you choose, and a search across everything you’ve ever
-        watched.
+        Memories from this exact date in past years, any day you choose, and a search across everything in your
+        history.
       </SectionHead>
       <div className="tm-grid">
         <OnThisDay report={report} entries={entries} />
@@ -30,10 +31,13 @@ function VideoRow({ e, report, showDate = false }: { e: WatchEntry; report: Repo
     <li className="video-row">
       <span className="video-time muted tabular">{showDate ? date(e.t) : time(e.t)}</span>
       <div className="video-text">
-        <MaybeLink className="video-title" href={videoUrl(e.videoId, report.meta.source)}>
-          {e.title || 'A video that’s no longer available'}
+        <MaybeLink className="video-title" href={link(e.url, report.meta.sample)}>
+          {e.title || untitled(e.source)}
         </MaybeLink>
-        {e.channel && <span className="muted video-channel">{e.channel}</span>}
+        <span className="muted video-channel">
+          {report.meta.sources.length > 1 && <span className="src-tag">{sourceDef(e.source).emoji} {sourceDef(e.source).label}</span>}
+          {e.channel}
+        </span>
       </div>
     </li>
   );
@@ -69,7 +73,7 @@ function OnThisDay({ report, entries }: { report: Report; entries: WatchEntry[] 
               <div className="otd-head">
                 <strong>{year}</strong>
                 <span className="muted">
-                  {today.getFullYear() - year} year{today.getFullYear() - year === 1 ? '' : 's'} ago · {num(list.length)} video{list.length === 1 ? '' : 's'}
+                  {today.getFullYear() - year} year{today.getFullYear() - year === 1 ? '' : 's'} ago · {num(list.length)} {list.length === 1 ? report.vocab.item : report.vocab.items}
                 </span>
               </div>
               <ul className="video-list">
@@ -122,7 +126,7 @@ function PickADay({ report, entries }: { report: Report; entries: WatchEntry[] }
         </button>
       </div>
       <p className="muted day-summary">
-        {list.length ? `${num(list.length)} video${list.length === 1 ? '' : 's'} on ${date(new Date(day + 'T12:00').getTime(), { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}` : 'Nothing watched on this day.'}
+        {list.length ? `${num(list.length)} ${list.length === 1 ? report.vocab.item : report.vocab.items} on ${date(new Date(day + 'T12:00').getTime(), { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}` : 'Nothing on this day.'}
         {report.milestones.busiestDay && day === isoDay(report.milestones.busiestDay.date) && ' · your busiest day ever 🔥'}
       </p>
       <ul className="video-list scroll">
@@ -169,7 +173,7 @@ function Search({ report, entries }: { report: Report; entries: WatchEntry[] }) 
         <input
           className="input"
           type="search"
-          placeholder="Try a game, an artist, a hobby, a channel…"
+          placeholder={`Try a game, an artist, a show, a hobby, a ${report.vocab.creator}…`}
           value={q}
           onChange={(e) => setQ(e.target.value)}
           aria-label="Search your history"
@@ -191,7 +195,7 @@ function Search({ report, entries }: { report: Report; entries: WatchEntry[] }) 
           <div className="search-stats">
             <div>
               <span className="fact-value">{num(result.hits.length)}</span>
-              <span className="fact-label">matching videos</span>
+              <span className="fact-label">matching {report.vocab.items}</span>
             </div>
             <div>
               <span className="fact-value">{monthYear(result.hits[0].t)}</span>

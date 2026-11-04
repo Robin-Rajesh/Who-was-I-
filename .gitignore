@@ -8,3 +8,10 @@ watch-history.json
 watch-history.html
 takeout-*.zip
 *.tsbuildinfo
+Streaming_History*.json
+StreamingHistory*.json
+my_spotify_data.zip
+ViewingActivity.csv
+NetflixViewingHistory.csv
+user_data*.json
+instagram-*.zip

@@ -15,25 +15,25 @@ export function Rhythm({ report }: { report: Report }) {
   const busiestDay = weekTotals.indexOf(Math.max(...weekTotals));
   return (
     <section className="section wrap" id="rhythm">
-      <SectionHead eyebrow="When you watched" title="Your daily rhythm, through the years">
+      <SectionHead eyebrow="When you showed up" title="Your daily rhythm, through the years">
         Each row is a year and each column is an hour of the day. Rows are coloured by that year’s own pattern, so you
-        can see your habits change shape even if you watched more or less.
+        can see your habits change shape even when you did more or less.
       </SectionHead>
       <div className="rhythm-callouts">
         <Reveal className="card callout">
           <span className="eyebrow">🦉 Peak night owl</span>
           <strong className="callout-big">{owl.year}</strong>
-          <p className="ink-2">{pct(owl.night)} of your watching happened between 11pm and 5am.</p>
+          <p className="ink-2">{pct(owl.night)} of your {report.vocab.doing} happened between 11pm and 5am.</p>
         </Reveal>
         <Reveal className="card callout" delay={60}>
           <span className="eyebrow">🌅 Peak early bird</span>
           <strong className="callout-big">{lark.year}</strong>
-          <p className="ink-2">{pct(lark.morning)} of your watching happened between 5am and 9am.</p>
+          <p className="ink-2">{pct(lark.morning)} of your {report.vocab.doing} happened between 5am and 9am.</p>
         </Reveal>
         <Reveal className="card callout" delay={120}>
           <span className="eyebrow">📅 Favourite day</span>
           <strong className="callout-big">{['Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays', 'Sundays'][busiestDay]}</strong>
-          <p className="ink-2">{pct(weekTotals[busiestDay] / meta.total)} of all your watching.</p>
+          <p className="ink-2">{pct(weekTotals[busiestDay] / Math.max(1, weekTotals.reduce((s, x) => s + x, 0)))} of all your {report.vocab.doing}.</p>
         </Reveal>
       </div>
       <Reveal className="card chart-card">
@@ -50,7 +50,7 @@ export function Rhythm({ report }: { report: Report }) {
               <div className="tt-title">
                 {rows[r].year} · {HOURS[c]}–{HOURS[(c + 1) % 24]}
               </div>
-              {num(v)} videos ({pct(share, 1)} of that year)
+              {num(v)} {report.vocab.items} ({pct(share, 1)} of that year)
             </>
           )}
         />
@@ -68,7 +68,7 @@ export function Rhythm({ report }: { report: Report }) {
               <div className="tt-title">
                 {WEEKDAYS[r]} · {HOURS[c]}
               </div>
-              {num(v)} videos
+              {num(v)} {report.vocab.items}
             </>
           )}
         />
